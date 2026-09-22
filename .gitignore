@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+run_log.txt
+기획.md
+
+build/
+dist/
+백업본/
+연습한거 짬통/
+*.spec
+
+*.exe
