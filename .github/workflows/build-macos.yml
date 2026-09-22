@@ -21,14 +21,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller wcwidth colorama
+          python -m pip install pyinstaller wcwidth colorama
 
-      - name: Build
+      - name: Build macOS executable
         run: |
-          pyinstaller --onefile --name coding-rehab-dungeon main.py
+          python -m PyInstaller --clean --onefile --console --name "코딩재활치료던전" main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macOS-build
-          path: dist/coding-rehab-dungeon
+          name: 코딩재활치료던전-macOS
+          path: dist/코딩재활치료던전
