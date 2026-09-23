@@ -1,3 +1,4 @@
+import sys
 import json
 import subprocess
 import urllib.request
@@ -9,7 +10,10 @@ import zipfile
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 
 GAME_DIR = BASE_DIR / "game"
 GAME_FILE = GAME_DIR / "game.exe"
@@ -176,7 +180,7 @@ def update_game():
 
 
 def launch_game():
-    subprocess.Popen(
+    subprocess.run(
         [str(GAME_FILE)],
         cwd=GAME_DIR,
     )
