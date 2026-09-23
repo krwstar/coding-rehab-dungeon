@@ -23,12 +23,33 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pyinstaller wcwidth colorama
 
-      - name: Build macOS executable
+      - name: Build game
         run: |
-          python -m PyInstaller --clean --onefile --console --name "코딩재활치료던전" main.py
+          python -m PyInstaller --clean --onefile --console --name game game.py
+
+      - name: Build launcher
+        run: |
+          python -m PyInstaller --clean --onefile --console --name launcher launcher.py
+
+      - name: Prepare package
+        run: |
+          mkdir package
+          cp dist/game package/game
+          cp version.json package/version.json
+
+      - name: Make zip
+        run: |
+          cd package
+          zip -r ../coding-rehab-dungeon-macos.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 코딩재활치료던전-macOS
-          path: dist/코딩재활치료던전
+          name: coding-rehab-dungeon-macos
+          path: coding-rehab-dungeon-macos.zip
+
+      - name: Upload launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-macos
+          path: dist/launcher
