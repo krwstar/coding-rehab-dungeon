@@ -1,5 +1,6 @@
 import sys
 import json
+import platform
 import subprocess
 import urllib.request
 import urllib.error
@@ -10,13 +11,15 @@ import zipfile
 from pathlib import Path
 
 
+SYSTEM = platform.system()
+
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).resolve().parent
 else:
     BASE_DIR = Path(__file__).resolve().parent
 
+
 GAME_DIR = BASE_DIR / "game"
-GAME_FILE = GAME_DIR / "game.exe"
 VERSION_FILE = GAME_DIR / "version.json"
 
 VERSION_URL = (
@@ -24,11 +27,29 @@ VERSION_URL = (
     "krwstar/coding-rehab-dungeon/main/version.json"
 )
 
-DOWNLOAD_URL = (
-    "https://github.com/"
-    "krwstar/coding-rehab-dungeon/releases/latest/download/"
-    "coding-rehab-dungeon-windows.zip"
-)
+
+if SYSTEM == "Windows":
+    GAME_FILE = GAME_DIR / "game.exe"
+
+    DOWNLOAD_URL = (
+        "https://github.com/"
+        "krwstar/coding-rehab-dungeon/releases/latest/download/"
+        "coding-rehab-dungeon-windows.zip"
+    )
+
+elif SYSTEM == "Darwin":
+    GAME_FILE = GAME_DIR / "game"
+
+    DOWNLOAD_URL = (
+        "https://github.com/"
+        "krwstar/coding-rehab-dungeon/releases/latest/download/"
+        "coding-rehab-dungeon-macos.zip"
+    )
+
+else:
+    raise RuntimeError(
+        f"지원하지 않는 운영체제입니다: {SYSTEM}"
+    )
 
 
 def has_game():
@@ -52,8 +73,13 @@ def get_local_version():
 
 def get_remote_version():
     try:
-        with urllib.request.urlopen(VERSION_URL, timeout=5) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        with urllib.request.urlopen(
+            VERSION_URL,
+            timeout=5,
+        ) as response:
+            data = json.loads(
+                response.read().decode("utf-8")
+            )
 
         return data["version"]
 
@@ -109,12 +135,18 @@ def update_game():
             with zipfile.ZipFile(zip_path, "r") as zip_file:
                 zip_file.extractall(extract_dir)
 
-            new_game_file = extract_dir / "game.exe"
-            new_version_file = extract_dir / "version.json"
+            if SYSTEM == "Windows":
+                new_game_file = extract_dir / "game.exe"
+            else:
+                new_game_file = extract_dir / "game"
+
+            new_version_file = (
+                extract_dir / "version.json"
+            )
 
             if not new_game_file.exists():
                 raise FileNotFoundError(
-                    "업데이트 파일에 game.exe가 없습니다."
+                    f"업데이트 파일에 {new_game_file.name}이 없습니다."
                 )
 
             if not new_version_file.exists():
@@ -148,16 +180,17 @@ def update_game():
                         destination,
                         dirs_exist_ok=True,
                     )
-
                 else:
                     shutil.copy2(
                         item,
                         destination,
                     )
 
+            if SYSTEM == "Darwin":
+                GAME_FILE.chmod(0o755)
+
             print(
-                f"업데이트 완료! "
-                f"버전 {version_data['version']}"
+                f"업데이트 완료! 버전 {version_data['version']}"
             )
 
         return True
@@ -216,15 +249,14 @@ def main():
 
     if check_update(remote_version):
         print(
-            f"새로운 버전이 있습니다. "
-            f"({remote_version})"
-        )
+            f"새로운 버전이 있습니다. ({remote_version})")
 
         if not update_game():
             print("업데이트에 실패했습니다.")
             print("기존 버전으로 게임을 실행합니다.")
             input("Enter를 눌러 진행...")
-
+    
+    print()
     launch_game()
 
 
