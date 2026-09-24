@@ -442,11 +442,7 @@ def enemy_turn(player, enemy, enemy_units, battle_logs):
     enemy.trigger_turn_end_passive(battle_logs)
     enemy.trigger_turn_end_statuses(battle_logs)
     enemy.cleanup_statuses()
-    
-    for enemy in enemy_units:
-        if isinstance(enemy, FinalBoss):
-            enemy.check_phase(enemy_units, battle_logs,)
-    
+        
     time.sleep(0.8)
 
 
