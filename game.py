@@ -9,25 +9,107 @@ from run_log import save_run_log
 
 just_fix_windows_console()
 
-def main():
-    print("코딩 재활치료 목적 로그라이크 던전 돌파 게임!")
-    start = input("Enter A button... ")
-    if start.lower() == "a":
+import time
+
+from colorama import just_fix_windows_console
+
+from data import prologue_text
+from dungeon import run_floor, run_last_floor, slow_print
+from player_utils import create_player, select_job
+from run_log import save_run_log
+from meta_save import all_jobs_cleared, register_job_clear
+
+just_fix_windows_console()
+
+
+def clear_screen():
+    print("\033[2J\033[H", end="")
+
+
+def title_screen():
+    clear_screen()
+
+    print("=" * 55)
+    print()
+    print("        『코딩재활치료 그래픽카드 던전(가제)』")
+    print()
+    print("          코딩 재활치료 목적 로그라이크")
+    print("              던전 돌파 게임!")
+    print()
+    print("=" * 55)
+    print()
+    print("                 Enter A button...")
+    print()
+
+    start = input("> ").strip().lower()
+
+    if start == "a":
+        clear_screen()
         print("==== GAME OVER ====")
+        print()
         print("거기서는 B버튼이 정석이잖아?")
-        input()
-        exit()
-    elif start.lower() != "b":
+        input("\nEnter를 눌러 종료...")
+        return False
+
+    if start != "b":
+        clear_screen()
         print("==== GAME OVER ====")
+        print()
         print("A를 입력하세요.")
-        input()
-        exit()
-    if input("프롤로그를 보시겠습니까? y/n: ").lower() == "y":
-        slow_print(prologue_text)
-        time.sleep(1)
+        input("\nEnter를 눌러 종료...")
+        return False
+
+    return True
+
+
+def prologue_screen():
+    clear_screen()
+
+    print("=" * 55)
+    print("                      프롤로그")
+    print("=" * 55)
+    print()
+    print("프롤로그를 보시겠습니까?")
+    print()
+    print("[1] 예")
+    print("[2] 아니오")
+    print()
+
+    while True:
+        choice = input("> ").strip()
+
+        if choice == "1":
+            clear_screen()
+            slow_print(prologue_text)
+            time.sleep(1)
+            input("\nEnter를 눌러 계속...")
+            return
+
+        if choice == "2":
+            return
+
+        print("올바른 번호를 입력하세요.")
+
+def main():
+    if not title_screen():
+        return
+    register_job_clear("전사")
+    register_job_clear("마법사")
+    register_job_clear("도적")
+    register_job_clear("수호자")
+
+    print(all_jobs_cleared())  # False
+
+    register_job_clear("검객")
+
+    print(all_jobs_cleared())  # True
+    prologue_screen()
+
+    clear_screen()
     player = create_player()
     select_job(player)
 
+    clear_screen()
     print()
     print("=" * 45)
     print("                  게임 시작")
@@ -41,6 +123,7 @@ def main():
     print("                  1층 클리어!")
     print("=" * 45)
     print()
+    input("\nEnter를 눌러 다음 층으로...")
     
     run_floor(player, 2)
     
@@ -49,6 +132,7 @@ def main():
     print("                  2층 클리어!")
     print("=" * 45)
     print()
+    input("\nEnter를 눌러 다음 층으로...")
     
     run_floor(player, 3)
     
@@ -57,8 +141,11 @@ def main():
     print("                  3층 클리어!")
     print("=" * 45)
     print()
+    input("\nEnter를 눌러 다음 층으로...")
     
     run_last_floor(player)
+    
+    register_job_clear(player.job)
     
     print("\033[2J\033[H", end="")
     save_run_log(player, "클리어")

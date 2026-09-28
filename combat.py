@@ -334,12 +334,7 @@ def player_turn(
             break
 
         elif action == "4":
-            while True:
-                print("아이템 목록: ")
-                for i in range(len(player.items)):
-                    print(f"{i+1}. {player.items[i].name}")
-                print(f"{len(player.items)+1}. 뒤로")
-                
+            while True:                
                 grouped_items = group_items(player.items)
                 item_menu = "아이템 목록\n"
                 for i, entry in enumerate(grouped_items, start=1):
@@ -386,7 +381,10 @@ def player_turn(
                 )
                 continue
 
-            player.items.remove(item)
+            for i in range(len(player.items) - 1, -1, -1):
+                if player.items[i].name == item.name:
+                    player.items.pop(i)
+                    break
             use_item(player, item, target=target, enemy_units=enemy_units, battle_logs=battle_logs,)            
             break
 

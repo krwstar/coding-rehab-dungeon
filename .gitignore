@@ -3,6 +3,7 @@ __pycache__/
 
 run_log.txt
 기획.md
+meta_save.json
 
 build/
 dist/

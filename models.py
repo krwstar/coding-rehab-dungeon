@@ -1795,6 +1795,8 @@ class Player(Character):
             items=items,
             gold=100,
         )
+        
+        self.job = None
 
         self.run_stats = {
             "rooms_cleared": 0,

@@ -127,7 +127,7 @@ def update_game():
                 zip_path,
             )
 
-            print("다운로드 완료")
+            print("다운로드 완료!")
             print("업데이트 파일을 확인하는 중...")
 
             extract_dir.mkdir()
@@ -213,6 +213,8 @@ def update_game():
 
 
 def launch_game():
+    input("Enter를 눌러 게임 실행...")
+    
     subprocess.run(
         [str(GAME_FILE)],
         cwd=GAME_DIR,
@@ -238,7 +240,7 @@ def main():
         return
 
     if not game_exists:
-        input("Enter를 눌러 게임을 다운로드...")
+        print("게임을 다운로드합니다.")
 
         if not update_game():
             input("Enter를 눌러 종료...")
@@ -248,13 +250,12 @@ def main():
         return
 
     if check_update(remote_version):
-        print(
-            f"새로운 버전이 있습니다. ({remote_version})")
+        print(f"새로운 버전이 있습니다. ({remote_version})")
+        print("게임을 업데이트합니다.")
 
         if not update_game():
             print("업데이트에 실패했습니다.")
             print("기존 버전으로 게임을 실행합니다.")
-            input("Enter를 눌러 진행...")
     
     print()
     launch_game()

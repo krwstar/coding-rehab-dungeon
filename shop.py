@@ -10,6 +10,7 @@ from player_utils import (
     get_random_reward_by_rarity,
     SHOP_FLOOR_RARITY_WEIGHTS,
 )
+from ui_utils import clear_screen
 
 
 def get_shop_item_text(item):
@@ -22,7 +23,10 @@ def get_shop_item_text(item):
         )
 
     elif isinstance(item, Item):
-        return f"[아이템] {item.name} - {item.price}G\n" f"{item.flavor_text}"
+        return (
+            f"[아이템] {item.name} - {item.price}G\n"
+            f"{item.flavor_text}"
+        )
 
     elif isinstance(item, Action):
         return (
@@ -37,13 +41,22 @@ def get_shop_item_text(item):
 def shop(player, floor):
     rarity_weights = SHOP_FLOOR_RARITY_WEIGHTS[floor]
     reroll_cost = 30
+
     shop_items = (
-        [get_random_reward_by_rarity(equipments, rarity_weights) for _ in range(2)] +
-        [get_random_reward_by_rarity(skills, rarity_weights) for _ in range(2)] +
-        random.sample(items, 2)
+        [
+            get_random_reward_by_rarity(equipments, rarity_weights)
+            for _ in range(2)
+        ]
+        + [
+            get_random_reward_by_rarity(skills, rarity_weights)
+            for _ in range(2)
+        ]
+        + random.sample(items, 2)
     )
 
     while True:
+        clear_screen()
+
         print()
         print("=" * 45)
         print("                    상점")
@@ -64,59 +77,74 @@ def shop(player, floor):
         print("0. 상점에서 나간다")
         print("=" * 45)
 
-        choice = input("> ")
+        choice = input("> ").strip()
 
         if not choice.isdigit():
-            print("올바르지 않은 입력")
+            input("올바르지 않은 입력\nEnter를 눌러 계속...")
             continue
 
         choice = int(choice)
 
         if choice == 0:
-            print("상점을 나섰다.")
             return
-        
+
         if choice == status_num:
             show_status(player)
             continue
-        
+
         if choice == reroll_num:
             if player.gold < reroll_cost:
-                print("골드가 부족합니다")
+                input("골드가 부족합니다.\nEnter를 눌러 계속...")
                 continue
+
             player.gold -= reroll_cost
             player.run_stats["gold_spent"] += reroll_cost
             reroll_cost *= 2
+
             shop_items = (
-                [get_random_reward_by_rarity(equipments, rarity_weights) for _ in range(2)] +
-                [get_random_reward_by_rarity(skills, rarity_weights) for _ in range(2)] +
-                random.sample(items, 2)
+                [
+                    get_random_reward_by_rarity(equipments, rarity_weights)
+                    for _ in range(2)
+                ]
+                + [
+                    get_random_reward_by_rarity(skills, rarity_weights)
+                    for _ in range(2)
+                ]
+                + random.sample(items, 2)
             )
-            print("상점을 새로고침했다.")
+
             continue
 
         if choice not in range(1, len(shop_items) + 1):
-            print("올바르지 않은 입력")
+            input("올바르지 않은 입력\nEnter를 눌러 계속...")
             continue
 
         selected_item = shop_items[choice - 1]
 
+        clear_screen()
+
+        print()
+        print("=" * 45)
+        print("                 선택한 상품")
+        print("=" * 45)
+        print()
+        print(get_shop_item_text(selected_item))
         print()
         print("-" * 45)
-        print("선택한 상품")
-        print(get_shop_item_text(selected_item))
+        print(f"보유 골드: {player.gold}G")
         print("-" * 45)
 
         while True:
-            confirm = input("구매하시겠습니까? y/n: ").lower()
+            confirm = input("구매하시겠습니까? y/n: ").strip().lower()
 
             if confirm in ("y", ""):
                 if buy_shop_item(player, selected_item):
                     shop_items.pop(choice - 1)
+
+                input("\nEnter를 눌러 계속...")
                 break
 
             elif confirm == "n":
-                print("구매를 취소했다.")
                 break
 
             else:
@@ -131,6 +159,7 @@ def buy_shop_item(player, item):
         if buy_item(player, item):
             player.items.append(item)
             return True
+
         return False
 
     elif isinstance(item, Action):
@@ -150,6 +179,7 @@ def buy_skill(player, skill):
 
     player.gold -= skill.price
     player.run_stats["gold_spent"] += skill.price
+
     print(f"{skill.name}을(를) 구매했습니다.")
     return True
 
@@ -158,8 +188,10 @@ def buy_item(player, item):
     if player.gold >= item.price:
         player.gold -= item.price
         player.run_stats["gold_spent"] += item.price
+
         print(f"{item.name}을(를) 구매했습니다.")
         return True
+
     else:
         print("골드가 부족합니다")
         return False
@@ -175,6 +207,7 @@ def buy_equipment(player, equipment):
 
         print(f"{equipment.name}을(를) 구매했습니다.")
         return True
+
     else:
         print("골드가 부족합니다")
         return False

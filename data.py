@@ -730,6 +730,43 @@ weapons = [
             "이름 없는 장인이 벼린 듯한 도. 공격을 흘려낸 순간, 빈틈을 놓치지 않고 칼끝이 뒤따른다."
         ),
     ),
+    Weapon(
+        name="흑철 대태도",
+        hp=5,
+        attack=6,
+        basic_attack=Action(
+            name="대참",
+            effects=[
+                DamageEffect(
+                    power=1.5,
+                    stat="attack",
+                    dice_count=1,
+                    dice_sides=8,
+                ),
+            ],
+            flavor_text="묵직한 대태도를 크게 휘둘러 적을 베어냈다!",
+        ),
+        passive=ParrySuccessPassive(
+            name="기세",
+            effects=[
+                AddStatusEffect(
+                    status_class=StrengthenStatus,
+                    status_kwargs={
+                        "power": 0.1,
+                        "duration": 2,
+                    },
+                    target_type="self",
+                ),
+            ],
+        ),
+        price=100,
+        rarity=RARE,
+        flavor_text=(
+            "평타 [대참]: ATK × 1.5 + 1d8 데미지\n"
+            "패시브 [기세]: 패링 성공 시 강화 10% 획득 (2턴)\n"
+            "흑철로 만들어진 거대한 대태도. 공격을 받아낼수록 다음 일격에 힘이 실린다."
+        ),
+    ),
 
     # 에픽 무기
     Weapon(
@@ -1070,7 +1107,7 @@ weapons = [
         attack=6,
         speed=4,
         basic_attack=Action(
-            name="섬화",
+            name="섬광",
             effects=[
                 DamageEffect(
                     power=1.1,
@@ -1082,7 +1119,7 @@ weapons = [
             flavor_text="섬광처럼 번뜩이는 칼날로 적을 베어냈다!",
         ),
         passive=ParrySuccessPassive(
-            name="역섬",
+            name="역광",
             effects=[
                 DamageEffect(
                     power=0.8,
@@ -1095,9 +1132,47 @@ weapons = [
         price=140,
         rarity=EPIC,
         flavor_text=(
-            "기본 공격 [섬화]: ATK × 1.1 + 1d8\n"
-            "패시브 [역섬]: 패링 성공 시 ATK × 0.8 + 1d6 추가타\n"
-            "이름난 장인이 벼린 명도. 공격을 흘려낸 찰나, 더욱 날카로운 칼끝이 뒤따른다."
+            "기본 공격 [섬광]: ATK × 1.1 + 1d8\n"
+            "패시브 [역광]: 패링 성공 시 ATK × 0.8 + 1d6 추가타\n"
+            "태양마저 붙잡을 듯한 빛을 머금은 명도."
+        ),
+    ),
+    Weapon(
+        name="명대태도 츠키오토시",
+        hp=8,
+        attack=8,
+        speed=1,
+        basic_attack=Action(
+            name="낙월",
+            effects=[
+                DamageEffect(
+                    power=1.7,
+                    stat="attack",
+                    dice_count=1,
+                    dice_sides=10,
+                ),
+            ],
+            flavor_text="거대한 칼날을 내리쳐 적을 베어냈다!",
+        ),
+        passive=ParrySuccessPassive(
+            name="만월",
+            effects=[
+                AddStatusEffect(
+                    status_class=StrengthenStatus,
+                    status_kwargs={
+                        "power": 0.2,
+                        "duration": 2,
+                    },
+                    target_type="self",
+                ),
+            ],
+        ),
+        price=140,
+        rarity=EPIC,
+        flavor_text=(
+            "평타 [낙월]: ATK × 1.7 + 1d10 데미지\n"
+            "패시브 [만월]: 패링 성공 시 강화 20% 획득 (2턴)\n"
+            "달마저 끌어내릴 듯한 무게를 품은 이름난 대태도."
         ),
     ),
     
@@ -1519,8 +1594,46 @@ weapons = [
         rarity=LEGENDARY,
         flavor_text=(
             "기본 공격 [패링 각이 안 나와]: ATK × 1.2 + 1d10\n"
-            "패시브 [앞잡 들어간다잉]: 패링 성공 시 ATK × 1.0 + 1d8 추가타 (×2회)\n"
+            "패시브 [나는 모든 것을 패리한다]: 패링 성공 시 ATK × 1.0 + 1d8 추가타 (×2회)\n"
             "제작자의 취향이 지나치게 반영된 괴상한 도. 공격보다 패링 성공 순간에 더 큰 만족감을 준다."
+        ),
+    ),
+    Weapon(
+        name="검 튕기는 변태의 대태도",
+        hp=12,
+        attack=10,
+        speed=2,
+        basic_attack=Action(
+            name="패링은 거들 뿐",
+            effects=[
+                DamageEffect(
+                    power=2.0,
+                    stat="attack",
+                    dice_count=1,
+                    dice_sides=12,
+                ),
+            ],
+            flavor_text="패링만 하라는 법은 없어서 당당하게 평타를 쳤다!",
+        ),
+        passive=ParrySuccessPassive(
+            name="안 한다곤 안 했는데?",
+            effects=[
+                AddStatusEffect(
+                    status_class=StrengthenStatus,
+                    status_kwargs={
+                        "power": 0.3,
+                        "duration": 2,
+                    },
+                    target_type="self",
+                ),
+            ],
+        ),
+        price=200,
+        rarity=LEGENDARY,
+        flavor_text=(
+            "기본 공격 [패링은 거들 뿐]: ATK × 2.0 + 1d12\n"
+            "패시브 [안 한다곤 안 했는데?]: 패링 성공 시 강화 30% 획득 (2턴)\n"
+            "제작자의 취향이 지나치게 반영된 괴상한 대태도. 패링 성공 순간보다 그 뒤의 공격에 더 큰 만족감을 준다."
         ),
     ),
 ]
@@ -1672,6 +1785,7 @@ armors = [
         defense_action=Action(
             name="자세 잡기",
             effects=[
+                BlockEffect(power=0.5),
                 ActionGaugeEffect(
                     power=0,
                     flat=50,
@@ -1680,20 +1794,9 @@ armors = [
             ],
             flavor_text="호흡을 가다듬고 다음 움직임을 준비했다!",
         ),
-        passive=ParrySuccessPassive(
-            name="호흡",
-            effects=[
-                RestoreMpEffect(
-                    power=0,
-                    flat=2,
-                    target_type="self",
-                ),
-            ],
-        ),
         rarity=COMMON,
         flavor_text=(
-            "방어 [자세 잡기]: 행동 게이지 +50\n"
-            "패시브 [호흡]: 패링 성공 시 MP 2 회복\n"
+            "방어 [자세 잡기]:  방어도 DEF × 0.5 획득 / 행동 게이지 +50\n"
             "상대의 공격을 받아치는 순간에도 호흡을 흐트러뜨리지 않도록 만들어진 가벼운 외투."
         ),
     ),
@@ -1850,6 +1953,7 @@ armors = [
         defense_action=Action(
             name="호흡 가다듬기",
             effects=[
+                BlockEffect(power=0.5),
                 ActionGaugeEffect(
                     power=0,
                     flat=75,
@@ -1871,8 +1975,7 @@ armors = [
         price=95,
         rarity=RARE,
         flavor_text=(
-            "방어 [호흡 가다듬기]: 행동 게이지 +75\n"
-            "패시브 [정교한 호흡]: 패링 성공 시 MP 3 회복\n"
+            "방어 [호흡 가다듬기]: 방어도 DEF × 0.5 획득 / 행동 게이지 +75\n"
             "검객의 움직임을 방해하지 않도록 가볍게 제작된 외투."
         ),
     ),
@@ -1984,6 +2087,7 @@ armors = [
         defense_action=Action(
             name="간보기",
             effects=[
+                BlockEffect(power=0.5),
                 ActionGaugeEffect(
                     power=0,
                     flat=100,
@@ -1992,26 +2096,10 @@ armors = [
             ],
             flavor_text="상대의 움직임을 살피며 다음 순간을 노렸다!",
         ),
-        passive=ParrySuccessPassive(
-            name="집중의 호흡",
-            effects=[
-                RestoreHpEffect(
-                    power=0,
-                    flat=3,
-                    target_type="self",
-                ),
-                RestoreMpEffect(
-                    power=0,
-                    flat=4,
-                    target_type="self",
-                ),
-            ],
-        ),
         price=140,
         rarity=EPIC,
         flavor_text=(
-            "방어 [간보기]: 행동 게이지 +100\n"
-            "패시브 [집중의 호흡]: 패링 성공 시 HP 3 / MP 4 회복\n"
+            "방어 [간보기]: 방어도 DEF × 0.5 획득 / 행동 게이지 +100\n"
             "상대의 움직임을 읽는 데 집중할 수 있도록 만들어진 가벼운 외투."
         ),
     ),
@@ -2260,6 +2348,7 @@ armors = [
         defense_action=Action(
             name="패링 각 재기",
             effects=[
+                BlockEffect(power=0.5),
                 ActionGaugeEffect(
                     power=0,
                     flat=150,
@@ -2268,26 +2357,10 @@ armors = [
             ],
             flavor_text="패링 각이 나올 때까지 상대의 움직임을 지켜봤다!",
         ),
-        passive=ParrySuccessPassive(
-            name="이 맛에 패링하지",
-            effects=[
-                RestoreHpEffect(
-                    power=0,
-                    flat=5,
-                    target_type="self",
-                ),
-                RestoreMpEffect(
-                    power=0,
-                    flat=5,
-                    target_type="self",
-                ),
-            ],
-        ),
         price=200,
         rarity=LEGENDARY,
             flavor_text=(
-            "방어 [패링 각 재기]: 행동 게이지 +150\n"
-            "패시브 [이 맛에 패링하지]: 패링 성공 시 HP 5 / MP 5 회복\n"
+            "방어 [패링 각 재기]: 방어도 DEF × 0.5 획득 / 행동 게이지 +150\n"
             "제작자의 취향이 지나치게 반영된 괴상한 코트. 공격을 막는 것보다 정확히 튕겨내는 순간을 위해 만들어졌다."
         ),
     ),
@@ -2382,24 +2455,29 @@ rings = [
         ),
     ),
     Ring(
-        name="도전자의 반지",
+        name="수련자의 반지",
         attack=1,
         speed=1,
         price=50,
-        passive=HpDamagePassive(
-            name="오기",
+        passive=ParrySuccessPassive(
+            name="호흡",
             effects=[
-                ActionGaugeEffect(
+                RestoreHpEffect(
                     power=0,
-                    flat=30,
+                    flat=1,
+                    target_type="self",
+                ),
+                RestoreMpEffect(
+                    power=0,
+                    flat=2,
                     target_type="self",
                 ),
             ],
         ),
         rarity=COMMON,
         flavor_text=(
-            "패시브 [오기]: HP 피해를 받으면 행동 게이지 +30\n"
-            "맞았다고 물러설 이유는 없다."
+            "패시브 [호흡]: 패링 성공 시 HP 1 / MP 3 회복\n"
+            "공격을 흘려낸 뒤 호흡을 가다듬는 검술의 기초가 담긴 반지."
         ),
     ),
     
@@ -2507,24 +2585,29 @@ rings = [
         ),
     ),
     Ring(
-        name="승부사의 반지",
+        name="검사의 반지",
         attack=2,
         speed=2,
         passive=ParrySuccessPassive(
-            name="재촉",
+            name="정교한 호흡",
             effects=[
-                ActionGaugeEffect(
+                RestoreHpEffect(
                     power=0,
-                    flat=30,
-                    target_type="attacker",
+                    flat=2,
+                    target_type="self",
+                ),
+                RestoreMpEffect(
+                    power=0,
+                    flat=4,
+                    target_type="self",
                 ),
             ],
         ),
         price=100,
         rarity=RARE,
         flavor_text=(
-            "패시브 [재촉]: 패링 성공 시 공격자의 행동 게이지 +30\n"
-            "한 번 공격을 튕겨냈다고 승부가 끝난 것은 아니다."
+            "패시브 [정교한 호흡]: 패링 성공 시 HP 2 / MP 4 회복\n"
+            "공격을 흘려낸 순간 호흡을 가다듬어 다음 움직임을 준비한다."
         ),
     ),
     
@@ -2655,12 +2738,17 @@ rings = [
         attack=3,
         speed=3,
         passive=ParrySuccessPassive(
-            name="도발",
+            name="집중의 호흡",
             effects=[
-                ActionGaugeEffect(
+                RestoreHpEffect(
                     power=0,
-                    flat=40,
-                    target_type="attacker",
+                    flat=3,
+                    target_type="self",
+                ),
+                RestoreMpEffect(
+                    power=0 ,
+                    flat=5,
+                    target_type="self",
                 ),
                 AddStatusEffect(
                     status_class=VulnerableStatus,
@@ -2668,15 +2756,16 @@ rings = [
                         "power": 0.25,
                         "duration": 2,
                     },
-                    target_type="attacker",
+                    target_type="enemy",
                 ),
             ],
         ),
         price=140,
         rarity=EPIC,
         flavor_text=(
-            "패시브 [도발]: 패링 성공 시 공격자의 행동 게이지 +40 / 취약 25% 부여 (2턴)\n"
-            "공격을 튕겨낸 뒤 드러난 빈틈을 놓치지 않는 검객의 반지."
+            "패시브 [집중의 호흡]: 패링 성공 시 HP 3 / MP 5 회복 / \n"
+            "공격자에게 취약 25% 부여 (2턴)\n"
+            "공격을 튕겨낸 뒤 호흡을 가다듬고, 드러난 빈틈을 놓치지 않는다."
         ),
     ),
     
@@ -2811,20 +2900,25 @@ rings = [
         attack=4,
         speed=4,
         passive=ParrySuccessPassive(
-            name="또 쳐봐",
+            name="이 맛에 패링하지",
             effects=[
-                ActionGaugeEffect(
+                RestoreHpEffect(
                     power=0,
-                    flat=50,
-                    target_type="attacker",
+                    flat=5,
+                    target_type="self",
+                ),
+                RestoreMpEffect(
+                    power=0,
+                    flat=6,
+                    target_type="self",
                 ),
                 AddStatusEffect(
                     status_class=VulnerableStatus,
                     status_kwargs={
-                        "power": 0.4,
+                        "power": 0.5,
                         "duration": 2,
                     },
-                    target_type="attacker",
+                    target_type="enemy",
                 ),
                 AddStatusEffect(
                     status_class=WeakenStatus,
@@ -2832,15 +2926,16 @@ rings = [
                         "power": 0.2,
                         "duration": 2,
                     },
-                    target_type="attacker",
+                    target_type="enemy",
                 ),
             ],
         ),
         price=200,
         rarity=LEGENDARY,
         flavor_text=(
-            "패시브 [또 쳐봐]: 패링 성공 시 공격자의 행동 게이지 +50 / 취약 40% 부여 (2턴) / 약화 20% 부여 (2턴)\n"
-            "공격을 튕겨낸 뒤 물러나는 것은 하수의 발상이다. 다시 쳐보라고 재촉한 뒤 후속타조차 연속으로 패링하는 것이 고수다."
+            "패시브 [이 맛에 패링하지]: 패링 성공 시 HP 5 / MP 6 회복 / \n"
+            "공격자에게 취약 50% 부여 (2턴) / 약화 20% 부여 (2턴)\n"
+            "공격을 완벽하게 튕겨내는 순간의 쾌감에 중독된 자를 위한 반지."
         ),
     ),
 ]
@@ -3431,14 +3526,27 @@ skills = [
                 flat=100,
                 target_type="self",
             ),
+            AddStatusEffect(
+                status_class=ParryStatus,
+                status_kwargs={
+                    "power": 2,
+                    "flat": 5,
+                    "dice_count": 1,
+                    "dice_sides": 6,
+                    "stat": "attack",
+                },
+                target_type="self",
+            ),
         ],
         mp_cost=2,
         price=90,
         rarity=RARE,
-        flavor_text="검을 뽑는 순간 눈앞의 적을 베어냈다!",
+        flavor_text="검을 뽑는 순간 적을 베어내고 곧바로 반격을 준비했다!",
         description=(
-            "ATK × 0.4 + 1d4 데미지 / 행동 게이지 +100\n"
-            "검을 뽑는 순간 적을 베어내며 다음 행동을 앞당긴다."
+            "ATK × 0.4 + 1d4 데미지 / 행동 게이지 +100 / 패링 활성화\n"
+            "다음 공격 패링 시 ATK × 2.0 + 5 + 1d6 반격\n"
+            "패링 실패 시 1턴 간 행동불능 및 취약 50% (2턴)\n"
+            "검을 뽑는 순간 적을 베어내고, 그 기세를 끊지 않은 채 반격의 순간을 노린다."
         ),
     ),
     Action(
@@ -3715,47 +3823,9 @@ skills = [
             "방어도의 절반을 소모해 성벽을 유지한 채 강력한 일격을 가한다."
         ),
     ),
+
     Action(
-        name="진검승부",
-        effects=[
-            ActionGaugeEffect(
-                power=0,
-                flat=100,
-                target_type="self",
-            ),
-            ActionGaugeEffect(
-                power=0,
-                flat=100,
-                target_type="enemy",
-            ),
-            AddStatusEffect(
-                status_class=VulnerableStatus,
-                status_kwargs={
-                    "power": 1.0,
-                    "duration": 2,
-                },
-                target_type="self",
-            ),
-            AddStatusEffect(
-                status_class=VulnerableStatus,
-                status_kwargs={
-                    "power": 1.0,
-                    "duration": 1,
-                },
-                target_type="enemy",
-            ),
-        ],
-        mp_cost=2,
-        price=140,
-        rarity=EPIC,
-        flavor_text="적에게 물러설 수 없는 진검승부를 걸었다!",
-        description=(
-            "자신과 적의 행동 게이지 +100 / 서로 취약 100% 부여\n"
-            "서로의 방어를 버리고 다음 일격에 모든 것을 건다."
-        ),
-    ),
-    Action(
-        name="횡일섬",
+        name="낙일참",
         effects=[
             DamageEffect(
                 power=1.5,
@@ -3784,11 +3854,55 @@ skills = [
         mp_cost=4,
         price=140,
         rarity=EPIC,
+        flavor_text="지는 해처럼 크게 검을 휘둘러 모든 적을 베어냈다!",
         description=(
             "모든 적에게 ATK × 1.5 + 1d8 데미지 / 행동 게이지 -100 / 패링 활성화\n"
             "다음 공격 패링 시 ATK × 1.0 + 1d6 반격\n"
             "패링 실패 시 1턴 간 행동불능 및 취약 50% (2턴)\n"
-            "모든 적을 한 번에 베어낸 뒤 반격의 순간을 기다린다. 패링에 실패하면 자세가 무너진다."
+            "모든 적을 크게 베어낸 뒤 자세를 가다듬고 반격의 순간을 기다린다."
+        ),
+    ),
+    Action(
+        name="승월섬",
+        effects=[
+            DamageEffect(
+                power=0.5,
+                stat="attack",
+                dice_count=1,
+                dice_sides=4,
+                target_type="all_enemies",
+            ),
+            ActionGaugeEffect(
+                power=0,
+                flat=100,
+                target_type="self",
+            ),
+            ActionGaugeEffect(
+                power=0,
+                flat=100,
+                target_type="enemy",
+            ),
+            AddStatusEffect(
+                status_class=ParryStatus,
+                status_kwargs={
+                    "power": 3,
+                    "flat": 5,
+                    "dice_count": 1,
+                    "dice_sides": 8,
+                    "stat": "attack",
+                },
+                target_type="self",
+            ),
+        ],
+        mp_cost=4,
+        price=140,
+        rarity=EPIC,
+        flavor_text="달이 떠오르듯 적진을 베어 가르며 다음 공격을 재촉했다!",
+        description=(
+            "모든 적에게 ATK × 0.5 + 1d4 데미지 / 자신과 단일 적의 행동 게이지 +100 / 패링 활성화\n"
+            "다음 공격 패링 시 ATK × 3.0 + 5 + 1d8 반격\n"
+            "패링 실패 시 1턴 간 행동불능 및 취약 50% (2턴)\n"
+            "빠르게 적진을 베어낸 뒤 상대의 다음 공격을 끌어내 강하게 받아친다."
         ),
     ),
 
@@ -4040,6 +4154,11 @@ skills = [
         effects=[
             ActionGaugeEffect(
                 power=0,
+                flat=100,
+                target_type="self",
+            ),
+            ActionGaugeEffect(
+                power=0,
                 flat=200,
                 target_type="enemy",
             ),
@@ -4058,12 +4177,12 @@ skills = [
         mp_cost=5,
         price=200,
         rarity=LEGENDARY,
-        flavor_text="별빛을 검끝에 담아 필살의 한 순간을 기다렸다!",
+        flavor_text="별빛을 검끝에 담아     필살의 한 순간을 기다렸다!",
         description=(
-            "적의 행동 게이지 +200 / 패링 활성화\n"
+            "자신의 행동 게이지 +100 / 적의 행동 게이지 +200 / 패링 활성화\n"
             "다음 공격 패링 시 ATK × 4.0 + 10 + 2d10 반격\n"
             "패링 실패 시 1턴 간 행동불능 및 취약 50% (2턴)\n"
-            "별빛을 검끝에 담아 적의 행동을 재촉하고, 다가오는 일격에 모든 것을 건다. 패링에 실패하면 자세가 무너진다."
+            "별빛을 검끝에 담아 적의 행동을 재촉하고, 다가오는 일격에 모든 것을 건다."
         ),
     ),
     Action(

@@ -23,6 +23,7 @@ from data import (
     four_kings,
     final_boss,
 )
+from ui_utils import clear_screen
 
 
 def select_event(i):
@@ -104,17 +105,24 @@ def next_event(event, player, battle_count, floor):
         if random.random() < 0.2:
             print("적이 특별한 보상을 드랍했다!")
             choose_equipment_or_skill(player, floor=floor)
-        
+        input("Enter를 눌러 진행하기...")
         return enemy_names
     elif event == "보물":
+        clear_screen()
         treasure(player, floor)
+        input("Enter를 눌러 진행하기...")
     elif event == "미지":
+        clear_screen()
         run_unknown_event(player, floor)
         input("Enter를 눌러 진행하기...")
     elif event == "상점":
+        clear_screen()
         shop(player, floor)
+        input("Enter를 눌러 진행하기...")
     elif event == "휴식":
+        clear_screen()
         rest(player)
+        input("Enter를 눌러 진행하기...")
     elif event == "보스":
         before = get_player_snapshot(player)
         
@@ -191,9 +199,10 @@ def run_floor(player, floor):
     battle_count = 0
     
     for i in range(10):
-        print_room_header(i+1)
         events = select_event(i+1)
         while True:
+            clear_screen()
+            print_room_header(i+1)
             print("어디로 갈까?")
             print(f"0. 스테이터스 확인")
             print(f"1. {events[0]}")
@@ -270,6 +279,7 @@ def run_last_floor(player):
 
 
     # 사천왕-성직자
+    clear_screen()
     print_room_header(1)
 
     slow_print(
@@ -299,6 +309,7 @@ def run_last_floor(player):
     )
 
     # 사천왕-기사
+    clear_screen()
     print_room_header(2)
 
     slow_print(
@@ -334,6 +345,7 @@ def run_last_floor(player):
     )
 
     # 사천왕-마법사
+    clear_screen()
     print_room_header(3)
 
     slow_print(
@@ -369,6 +381,7 @@ def run_last_floor(player):
         enemies="사천왕-마법사",
     )
 
+    clear_screen()
     print_room_header(4)
 
     slow_print(
@@ -409,6 +422,7 @@ def run_last_floor(player):
         enemies="사천왕-도적",
     )
 
+    clear_screen()
     slow_print(
 """
 마지막 사천왕이 쓰러졌다.
@@ -448,6 +462,7 @@ def run_last_floor(player):
         kings[3],
     ]
 
+    clear_screen()
     slow_print(
 """
 마침내 마지막 문 앞에 도착했다.
@@ -512,6 +527,7 @@ def run_last_floor(player):
         enemies=enemy_names
     )
     
+    clear_screen()
     slow_print(
 """
 개발자는 더 이상 움직이지 않았다.
@@ -574,6 +590,7 @@ def run_last_floor(player):
     
     input("> 상자를 연다...")
 
+    clear_screen()
     slow_print(
 """
 조심스럽게 상자를 열었다.
@@ -672,9 +689,10 @@ def run_last_floor(player):
 
 ......
 
-납득했으면 됐다.
+뭐, 그렇게 납득했으면 됐다.
 """
         )
+        time.sleep(3)
     else:
         print(
 """

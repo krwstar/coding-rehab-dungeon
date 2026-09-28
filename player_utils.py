@@ -12,6 +12,7 @@ from models import (
 )
 
 from data import equipments, items, skills, sans, sans_skill
+from ui_utils import clear_screen
 
 
 STAT_REWARDS = {
@@ -72,6 +73,8 @@ def create_player():
 
 def show_status(player):
     while True:
+        clear_screen()
+
         print()
         print("=" * 45)
         print("                  스테이터스")
@@ -121,9 +124,12 @@ def show_status(player):
         elif choice == "4":
             show_item_details(player)
         else:
-            print("올바르지 않은 입력")
+            input("올바르지 않은 입력\nEnter를 눌러 계속...")
+
 
 def show_stat_details(player):
+    clear_screen()
+
     print()
     print("=" * 45)
     print("               스테이터스 상세")
@@ -163,7 +169,10 @@ def show_stat_details(player):
     print("=" * 45)
     input("Enter를 눌러 돌아가기...")
 
+
 def show_equipment_details(player):
+    clear_screen()
+
     print()
     print("=" * 45)
     print("                  장비 상세")
@@ -179,6 +188,7 @@ def show_equipment_details(player):
         print(f"[{slot_name}] [{equipment.rarity}] {equipment.name}")
 
         stats = get_equipment_stats(equipment)
+
         if stats:
             print(f"능력치: {stats}")
         else:
@@ -189,7 +199,10 @@ def show_equipment_details(player):
 
     input("Enter를 눌러 돌아가기...")
 
+
 def show_skill_details(player):
+    clear_screen()
+
     print()
     print("=" * 45)
     print("                  스킬 상세")
@@ -197,6 +210,7 @@ def show_skill_details(player):
 
     if not player.skills:
         print("보유한 스킬이 없다.")
+
     else:
         for i, skill in enumerate(player.skills, start=1):
             print(f"{i}. [{skill.rarity}] {skill.name}")
@@ -206,8 +220,11 @@ def show_skill_details(player):
 
     input("Enter를 눌러 돌아가기...")
 
+
 def show_item_details(player):
     while True:
+        clear_screen()
+
         print()
         print("=" * 45)
         print("                 아이템 상세")
@@ -219,37 +236,53 @@ def show_item_details(player):
             return
 
         grouped_items = group_items(player.items)
-        item_menu = "아이템 목록\n"
+
+        print("아이템 목록")
+
         for i, entry in enumerate(grouped_items, start=1):
             item = entry["item"]
             count = entry["count"]
-            item_menu += f"{i}. [{item.name}] x{count}\n"
-            item_menu += f"    {item.flavor_text}\n"
-        item_menu += "0. 뒤로\n"
-        print(item_menu)
-        
+
+            print(f"{i}. [{item.name}] x{count}")
+            print(f"    {item.flavor_text}")
+
+        print("0. 뒤로")
+        print("=" * 45)
+
         choice = input("> ")
+
         if not choice.isdigit():
-            print("올바르지 않은 입력")
+            input("올바르지 않은 입력\nEnter를 눌러 계속...")
             continue
 
         choice = int(choice)
+
         if choice == 0:
             return
-        if choice not in range(1, len(player.items) + 1):
-            print("올바르지 않은 입력")
+
+        if choice not in range(1, len(grouped_items) + 1):
+            input("올바르지 않은 입력\nEnter를 눌러 계속...")
             continue
-        
-        item = player.items[choice - 1]
+
+        item = grouped_items[choice - 1]["item"]
+
         if not item.usable_outside_battle:
-            print("전투 중에만 사용할 수 있는 아이템이다.")
+            input(
+                "전투 중에만 사용할 수 있는 아이템이다.\n"
+                "Enter를 눌러 계속..."
+            )
             continue
-        
+
         use_item(player, item)
-        player.items.remove(item)
+        for i in range(len(player.items) - 1, -1, -1):
+            if player.items[i].name == item.name:
+                player.items.pop(i)
+                break
 
         item_uses = player.run_stats["items_used"]
         item_uses[item.name] = item_uses.get(item.name, 0) + 1
+
+        input("\nEnter를 눌러 계속...")
 
 def group_items(items):
     grouped = {}
@@ -430,6 +463,7 @@ def find_skill(skills, name):
 
 def select_job(player):
     while True:
+        clear_screen()
         print("=" * 45)
         print("직업을 고르세요.")
         print()
@@ -455,6 +489,7 @@ def select_job(player):
         print("   특징: 적과 나의 행동 순서를 조절하고, 패링으로 공격을 받아치는 고인물용 직업입니다.")
         choice = input("> ")
         if choice == "1":
+            player.job = "전사"
             player.weapon = find_equipment(equipments, "철 검")
             player.armor = find_equipment(equipments, "가죽 갑옷")
             player.ring = find_equipment(equipments, "전사의 반지")
@@ -462,6 +497,7 @@ def select_job(player):
             player.skills.append(find_skill(skills, "휩쓸기"))
             break
         elif choice == "2":
+            player.job = "마법사"
             player.weapon = find_equipment(equipments, "마법봉")
             player.armor = find_equipment(equipments, "로브")
             player.ring = find_equipment(equipments, "마력의 반지")
@@ -470,6 +506,7 @@ def select_job(player):
             player.skills.append(find_skill(skills, "냉기탄"))
             break
         elif choice == "3":
+            player.job = "도적"
             player.weapon = find_equipment(equipments, "단검")
             player.armor = find_equipment(equipments, "경량복")
             player.ring = find_equipment(equipments, "독침의 반지")
@@ -478,6 +515,7 @@ def select_job(player):
             player.skills.append(find_skill(skills, "연막"))
             break
         elif choice == "4":
+            player.job = "수호자"
             player.weapon = find_equipment(equipments, "철제 방패")
             player.armor = find_equipment(equipments, "중갑")
             player.ring = find_equipment(equipments, "견고한 의지의 반지")
@@ -485,28 +523,28 @@ def select_job(player):
             player.skills.append(find_skill(skills, "철벽 태세"))
             break
         elif choice == "5":
+            player.job = "검객"
             player.weapon = find_equipment(equipments, "연습용 도")
             player.armor = find_equipment(equipments, "검객의 외투")
-            player.ring = find_equipment(equipments, "도전자의 반지")
+            player.ring = find_equipment(equipments, "수련자의 반지")
             player.skills.append(find_skill(skills,"패링"))
             player.skills.append(find_skill(skills,"도발"))
             break
         # elif choice == "0":
+        #     player.job = "디버거"
         #     player.weapon = find_equipment(equipments, "연습용 도")
-        #     player.armor = find_equipment(equipments, "성채의 갑주")
-        #     player.ring = find_equipment(equipments, "도전자의 반지")
-        #     player.skills.append(find_skill(skills,"납도"))
-        #     player.skills.append(find_skill(skills,"히코보시"))
-        #     player.skills.append(find_skill(skills,"최후의 성벽"))
-        #     player.skills.append(find_skill(skills,"난공불락"))
+        #     player.armor = find_equipment(equipments, "검객의 외투")
+        #     player.ring = find_equipment(equipments, "수련자의 반지")
+        #     player.skills.append(find_skill(skills,"낙일참"))
+        #     player.skills.append(find_skill(skills,"승월섬"))
         #     player.items.extend(items)
         #     player.max_hp += 1000
         #     player.max_mp += 1000
-        #     player.attack += 150
-        #     player.magic += 15
-        #     player.defense += 15
-        #     player.speed += 15
-        #     break
+            # player.attack += 15
+            # player.magic += 15
+            # player.defense += 15
+            # player.speed += 15
+            # break
         else:
             print("올바르지 않은 입력")
     player.hp = calculate_max_hp(player)
@@ -629,9 +667,7 @@ def choose_equipment_or_skill(player, event=None, floor=1):
         if reward is not None and reward not in rewards:
             rewards.append(reward)
 
-    while True:
-        print()
-        
+    while True:        
         if reward_type == "equipment":
             print("장비를 선택하세요.")
         else:
@@ -681,6 +717,7 @@ def choose_equipment_or_skill(player, event=None, floor=1):
             player.run_stats["gold_spent"] += 50
             rewards = make_rewards(reward_pool, rarity_weights,)
             rerolled = True
+            clear_screen()
             print("보상을 다시 뽑았다.")
             continue
 

@@ -21,6 +21,7 @@ def save_run_log(player, result):
     lines.append("===== 플레이 결과 =====")
     lines.append(f"결과: {result}")
     lines.append(f"플레이어: {player.name}")
+    lines.append(f"직업: {player.job}")
     lines.append(f"플레이 시간: {minutes}분 {seconds}초")
     lines.append("")
 
