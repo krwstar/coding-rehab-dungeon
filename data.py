@@ -738,7 +738,7 @@ weapons = [
             name="대참",
             effects=[
                 DamageEffect(
-                    power=1.5,
+                    power=1.4,
                     stat="attack",
                     dice_count=1,
                     dice_sides=8,
@@ -752,8 +752,8 @@ weapons = [
                 AddStatusEffect(
                     status_class=StrengthenStatus,
                     status_kwargs={
-                        "power": 0.1,
-                        "duration": 2,
+                        "power": 0.3,
+                        "duration": 1,
                     },
                     target_type="self",
                 ),
@@ -762,8 +762,8 @@ weapons = [
         price=100,
         rarity=RARE,
         flavor_text=(
-            "평타 [대참]: ATK × 1.5 + 1d8 데미지\n"
-            "패시브 [기세]: 패링 성공 시 강화 10% 획득 (2턴)\n"
+            "평타 [대참]: ATK × 1.4 + 1d8 데미지\n"
+            "패시브 [기세]: 패링 성공 시 강화 30% 획득 (1턴)\n"
             "흑철로 만들어진 거대한 대태도. 공격을 받아낼수록 다음 일격에 힘이 실린다."
         ),
     ),
@@ -1146,7 +1146,7 @@ weapons = [
             name="낙월",
             effects=[
                 DamageEffect(
-                    power=1.7,
+                    power=1.6,
                     stat="attack",
                     dice_count=1,
                     dice_sides=10,
@@ -1160,8 +1160,8 @@ weapons = [
                 AddStatusEffect(
                     status_class=StrengthenStatus,
                     status_kwargs={
-                        "power": 0.2,
-                        "duration": 2,
+                        "power": 0.50,
+                        "duration": 1,
                     },
                     target_type="self",
                 ),
@@ -1170,8 +1170,8 @@ weapons = [
         price=140,
         rarity=EPIC,
         flavor_text=(
-            "평타 [낙월]: ATK × 1.7 + 1d10 데미지\n"
-            "패시브 [만월]: 패링 성공 시 강화 20% 획득 (2턴)\n"
+            "평타 [낙월]: ATK × 1.6 + 1d10 데미지\n"
+            "패시브 [만월]: 패링 성공 시 강화 50% 획득 (1턴)\n"
             "달마저 끌어내릴 듯한 무게를 품은 이름난 대태도."
         ),
     ),
@@ -1607,7 +1607,7 @@ weapons = [
             name="패링은 거들 뿐",
             effects=[
                 DamageEffect(
-                    power=2.0,
+                    power=1.8,
                     stat="attack",
                     dice_count=1,
                     dice_sides=12,
@@ -1621,7 +1621,7 @@ weapons = [
                 AddStatusEffect(
                     status_class=StrengthenStatus,
                     status_kwargs={
-                        "power": 0.3,
+                        "power": 1.0,
                         "duration": 2,
                     },
                     target_type="self",
@@ -1631,8 +1631,8 @@ weapons = [
         price=200,
         rarity=LEGENDARY,
         flavor_text=(
-            "기본 공격 [패링은 거들 뿐]: ATK × 2.0 + 1d12\n"
-            "패시브 [안 한다곤 안 했는데?]: 패링 성공 시 강화 30% 획득 (2턴)\n"
+            "기본 공격 [패링은 거들 뿐]: ATK × 1.8 + 1d12\n"
+            "패시브 [안 한다곤 안 했는데?]: 패링 성공 시 강화 100% 획득 (1턴)\n"
             "제작자의 취향이 지나치게 반영된 괴상한 대태도. 패링 성공 순간보다 그 뒤의 공격에 더 큰 만족감을 준다."
         ),
     ),
