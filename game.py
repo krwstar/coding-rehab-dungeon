@@ -99,7 +99,6 @@ def main():
     clear_screen()
     player = create_player()
     select_job(player)
-    run_hidden_floor(player) # 테스트중
 
     clear_screen()
     print()
