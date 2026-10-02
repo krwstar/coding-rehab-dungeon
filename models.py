@@ -1,6 +1,8 @@
 import time
 import random
 
+from copy import deepcopy
+
 BASIC = "basic"
 COMMON = "common"
 RARE = "rare"
@@ -516,6 +518,7 @@ class DamageEffect(Effect):
         can_crit=True,
         target_type="enemy",
         can_trigger_passives=True,
+        can_trigger_defense=True,
     ):
         self.power = power
         self.flat=flat
@@ -525,6 +528,7 @@ class DamageEffect(Effect):
         self.can_crit = can_crit
         self.target_type = target_type
         self.can_trigger_passives = can_trigger_passives
+        self.can_trigger_defense = can_trigger_defense
 
     def apply(self, user, target, battle_logs):
         base_damage = int(calculate_stat(user, self.stat) * self.power) + self.flat
@@ -537,9 +541,10 @@ class DamageEffect(Effect):
         
         damage = calculate_damage_dealt(user, damage)
         damage = calculate_damage_taken(target, damage)
-        damage = target.trigger_before_take_damage_statuses(
-            user, damage, battle_logs
-        )
+        if self.can_trigger_defense:
+            damage = target.trigger_before_take_damage_statuses(
+                user, damage, battle_logs
+            )
         final_damage = damage
         hp_damage, blocked_damage = take_damage(target, damage)
 
@@ -839,6 +844,41 @@ class MultiplyPoisonEffect(Effect):
         add_battle_log(
             battle_logs,
             f"{target.name}은(는) 중독 상태가 아니라 독을 증폭시킬 수 없다!"
+        )
+
+
+class RemoveDebuffEffect(Effect):
+    def __init__(self, target_type="self"):
+        self.target_type = target_type
+
+    def apply(self, user, target, battle_logs):
+        removed = [
+            status
+            for status in target.statuses
+            if getattr(status, "is_debuff", False)
+        ]
+
+        if not removed:
+            add_battle_log(
+                battle_logs,
+                f"{target.name}에게 제거할 상태이상이 없다!"
+            )
+            return
+
+        target.statuses = [
+            status
+            for status in target.statuses
+            if not getattr(status, "is_debuff", False)
+        ]
+
+        removed_names = ", ".join(
+            status.name
+            for status in removed
+        )
+
+        add_battle_log(
+            battle_logs,
+            f"{target.name}의 상태이상이 제거되었다! ({removed_names})"
         )
 
 
@@ -1190,7 +1230,6 @@ class FreezeImmunityStatus(Status):
     def __init__(self, source=None):
         super().__init__(name="냉기 면역")
         self.expired = False
-    is_debuff = True
 
     def on_turn_end(self, target, battle_logs):
         self.expired = True
@@ -1359,6 +1398,7 @@ class ParryStatus(Status):
             stat=self.stat,
             dice_count=self.dice_count,
             dice_sides=self.dice_sides,
+            can_trigger_defense=False,
         ).apply(
             target,
             attacker,
@@ -1425,6 +1465,7 @@ class AbsoluteParryStatus(Status):
             stat=self.stat,
             dice_count=self.dice_count,
             dice_sides=self.dice_sides,
+            can_trigger_defense=False,
         ).apply(
             target,
             attacker,
@@ -1856,6 +1897,15 @@ class Enemy(Character):
         self.action_pool = action_pool
         self.action_pools = action_pools
         self.action_index = 0
+    
+    def select_action(self):
+        action = self.action_pool[self.action_index]
+
+        self.action_index += 1
+        if self.action_index >= len(self.action_pool):
+            self.action_index = 0
+
+        return action
 
 
 class FinalBoss(Enemy):
@@ -1899,7 +1949,7 @@ class FinalBoss(Enemy):
         self.action_slots_phase_1 = action_slots_phase_1 or []
         self.action_slots_phase_2 = action_slots_phase_2 or []
         self.action_slots_phase_3 = action_slots_phase_3 or []
-        
+
         self.action_index = 0
 
         self.phase = 1
@@ -2177,6 +2227,832 @@ class FinalBoss(Enemy):
         add_battle_log(battle_logs, "")
         
         return True
+
+
+class ChimeraEnemy(Enemy):
+    def select_action(self):
+        slot = self.action_pool[self.action_index]
+
+        self.action_index += 1
+        if self.action_index >= len(self.action_pool):
+            self.action_index = 0
+
+        return random.choice(slot)
+
+
+class GenerativeAIBoss(Enemy):
+    def __init__(
+        self,
+        name="생성형 인공지능",
+        max_hp=0,
+        max_mp=0,
+        speed=0,
+        attack=0,
+        magic=0,
+        defense=0,
+        crit_chance=0.05,
+        block=0,
+        skills=None,
+        items=None,
+        gold=0,
+        action_slots_phase_1=None,
+        action_slots_phase_2=None,
+        action_slots_phase_3=None,
+    ):
+        super().__init__(
+            name=name,
+            max_hp=max_hp,
+            max_mp=max_mp,
+            speed=speed,
+            attack=attack,
+            magic=magic,
+            defense=defense,
+            crit_chance=crit_chance,
+            block=block,
+            skills=skills,
+            items=items,
+            gold=gold,
+        )
+
+        self.action_slots_phase_1 = action_slots_phase_1 or []
+        self.action_slots_phase_2 = action_slots_phase_2 or []
+        self.action_slots_phase_3 = action_slots_phase_3 or []
+
+        self.action_index = 0
+        
+        self.phase = 1
+        self.observations=[]
+    
+    def check_phase(self, enemy_units, battle_logs):
+        if self.phase == 1 and self.hp <= self.max_hp * 0.7:
+            self.phase = 2
+            self.action_index = 0
+            
+            enemy_units[:] = [
+                enemy
+                for enemy in enemy_units
+                if enemy is self
+            ]
+
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[학습 데이터 분석 완료.]")
+            add_battle_log(battle_logs, "[기존 개체들을 삭제합니다.]")
+            add_battle_log(battle_logs, "[단순 재현의 효율성을 검토합니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[기존 행동 패턴을 분해합니다.]")
+            add_battle_log(battle_logs, "[유효한 요소를 추출합니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[재현 데이터 분석 완료.]")
+            add_battle_log(battle_logs, "[행동 패턴 재구성을 시작합니다.]")
+            add_battle_log(battle_logs, "")
+
+            return True
+        
+        if self.phase == 2 and self.hp <= self.max_hp * 0.4:
+            self.phase = 3
+            self.action_index = 0
+            
+            enemy_units[:] = [
+                enemy
+                for enemy in enemy_units
+                if enemy is self
+            ]
+            
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[생성 데이터 분석 완료.]")
+            add_battle_log(battle_logs, "[행동 패턴만으로는 충분하지 않습니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[기존 개체들을 삭제합니다.]")
+            add_battle_log(battle_logs, "[대상을 분석합니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[전투 기록을 통합합니다.]")
+            add_battle_log(battle_logs, "[장비 정보를 반영합니다.]")
+            add_battle_log(battle_logs, "[행동 패턴을 재구성합니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[복제 모델 생성 준비 완료.]")
+            add_battle_log(battle_logs, "")
+            
+            return True
+
+        return False
+    
+    def select_action(self, enemy_units):
+        if self.can_summon(enemy_units):
+            return None
+
+        if self.phase == 1:
+            slots = self.action_slots_phase_1
+        elif self.phase == 2:
+            slots = self.action_slots_phase_2
+        else:
+            slots = self.action_slots_phase_3
+
+        slot = slots[self.action_index]
+
+        self.action_index += 1
+        if self.action_index >= len(slots):
+            self.action_index = 0
+
+        return random.choice(slot)
+        
+    def observe(self, observation, battle_logs):
+        self.observations.append(observation)
+        add_battle_log(battle_logs, "")
+        add_battle_log(battle_logs, f"[{observation['action_name']}]의 데이터를 학습합니다.")
+    
+    def deserialize_effect(self, data):
+        effect_type = data["type"]
+
+        if effect_type == "DamageEffect":
+            return DamageEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                dice_count=data["dice_count"],
+                dice_sides=data["dice_sides"],
+                can_crit=data["can_crit"],
+                can_trigger_passives=data["can_trigger_passives"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "RestoreHpEffect":
+            return RestoreHpEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "RestoreMpEffect":
+            return RestoreMpEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "BlockEffect":
+            return BlockEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "ActionGaugeEffect":
+            return ActionGaugeEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "ConsumeHpEffect":
+            return ConsumeHpEffect(
+                power=data["power"],
+                flat=data["flat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "ConsumeMpEffect":
+            return ConsumeMpEffect(
+                power=data["power"],
+                flat=data["flat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "ConsumeBlockEffect":
+            return ConsumeBlockEffect(
+                power=data["power"],
+                flat=data["flat"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "DesperateStrikeEffect":
+            return DesperateStrikeEffect(
+                power=data["power"],
+                flat=data["flat"],
+                stat=data["stat"],
+                dice_count=data["dice_count"],
+                dice_sides=data["dice_sides"],
+                hp_cost_power=data["hp_cost_power"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "ManaReleaseEffect":
+            return ManaReleaseEffect(
+                power=data["power"],
+                stat=data["stat"],
+                dice_count=data["dice_count"],
+                dice_sides=data["dice_sides"],
+                mp_cost_power=data["mp_cost_power"],
+                mp_damage_power=data["mp_damage_power"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "PoisonBurstEffect":
+            return PoisonBurstEffect(
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "MultiplyPoisonEffect":
+            return MultiplyPoisonEffect(
+                power=data["power"],
+                target_type=data["target_type"],
+            )
+
+        if effect_type == "AddStatusEffect":
+            status_class = globals().get(data["status_class"])
+
+            if status_class is None:
+                return None
+
+            return AddStatusEffect(
+                status_class=status_class,
+                status_kwargs=data["status_kwargs"].copy(),
+                target_type=data["target_type"],
+            )
+
+        return None
+    
+    def generate_action(self):
+        if not self.observations:
+            return None
+
+        observation = random.choice(self.observations)
+
+        effects = []
+
+        for data in observation["effect_sequence"]:
+            effect = self.deserialize_effect(data)
+
+            if effect is not None:
+                effects.append(effect)
+
+        return Action(
+            name=f"재현-{observation['action_name']}",
+            effects=effects,
+            mp_cost=0,
+            flavor_text=f"학습된 행동 패턴, [{observation['action_name']}]을(를) 재현합니다.",
+        )
+        
+    def can_summon(self, enemy_units):
+        summon_count = sum(
+            1
+            for enemy in enemy_units
+            if enemy is not self
+            and enemy.hp > 0
+        )
+
+        if self.phase == 1:
+            return summon_count < 2 and bool(self.observations)
+
+        elif self.phase == 2:
+            return summon_count < 2 and len(self.observations) >= 3
+
+        elif self.phase == 3:
+            return summon_count < 1 and bool(self.observations)
+
+        return False
+    
+    def summon_generated_enemy(self, player, enemy_units, battle_logs):
+        if self.phase == 3:
+            summon = self.create_clone(player)
+
+            if summon is None:
+                return
+
+            summon.block = 0
+            summon.action_gauge = 0
+            summon.action_index = 0
+
+            enemy_units.append(summon)
+
+            add_battle_log(battle_logs, "[복제 모델을 출력합니다.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, f"[대상: {player.name}]")
+            add_battle_log(battle_logs, "[전투 특성 동기화.]")
+            add_battle_log(battle_logs, "[장비 데이터 적용.]")
+            add_battle_log(battle_logs, "[행동 패턴 적용.]")
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[복제 완료.]")
+            add_battle_log(battle_logs, f"{player.name}의 복제체가 생성되었습니다.")
+
+            return
+
+        if self.phase == 1:
+            action = self.generate_action()
+
+            if action is None:
+                return
+
+            summon = Enemy(
+                name="불완전한 생성물",
+                max_hp=100,
+                max_mp=0,
+                speed=15,
+                attack=15,
+                magic=15,
+                defense=15,
+                action_pool=[
+                    action,
+                    Action(
+                        name="불완전한 공격",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                                stat="attack",
+                            )
+                        ],
+                        flavor_text="학습 데이터 부족. 단순 공격 패턴을 실행합니다."
+                    ),
+                ],
+            )
+
+        elif self.phase == 2:
+            action = self.generate_combined_action()
+
+            if action is None:
+                return
+
+            summon = Enemy(
+                name="생성된 개체",
+                max_hp=120,
+                max_mp=30,
+                speed=17,
+                attack=18,
+                magic=18,
+                defense=18,
+                action_pool=[
+                    action,
+                ],
+            )
+
+        else:
+            return
+
+        summon.block = 0
+        summon.action_gauge = 0
+        summon.action_index = 0
+
+        enemy_units.append(summon)
+
+        add_battle_log(battle_logs, "수집된 행동 데이터를 기반으로 개체를 구성합니다.")
+
+        if self.phase == 2 and hasattr(action, "generation_sources"):
+            add_battle_log(battle_logs, "수집된 데이터를 재구성합니다.")
+            add_battle_log(battle_logs, "[생성 패턴 분석]")
+            for source in action.generation_sources:
+                add_battle_log(
+                    battle_logs,
+                    f"- [{source['action_name']}]에서 "
+                    f"{source['effect_name']}을(를) 추출합니다."
+                )
+            add_battle_log(battle_logs, "")
+            add_battle_log(battle_logs, "[조합 완료.]")
+            add_battle_log(battle_logs,"새로운 개체가 생성되었습니다.")
+    
+    def get_effect_tags(self, data):
+        effect_type = data["type"]
+        tags = set()
+
+        if effect_type == "DamageEffect":
+            tags.add("damage")
+
+            if data["stat"] == "block":
+                tags.update({"block", "payoff"})
+
+        elif effect_type == "RestoreHpEffect":
+            tags.add("sustain")
+
+        elif effect_type == "RestoreMpEffect":
+            tags.update({"sustain", "mp"})
+
+        elif effect_type == "BlockEffect":
+            tags.update({"defense", "block", "setup"})
+
+        elif effect_type == "ActionGaugeEffect":
+            tags.add("tempo")
+
+        elif effect_type == "ConsumeHpEffect":
+            tags.update({"cost", "hp"})
+
+        elif effect_type == "ConsumeMpEffect":
+            tags.update({"cost", "mp"})
+
+        elif effect_type == "ConsumeBlockEffect":
+            tags.update({"cost", "block"})
+
+        elif effect_type == "DesperateStrikeEffect":
+            tags.update({"damage", "hp"})
+
+        elif effect_type == "ManaReleaseEffect":
+            tags.update({"damage", "mp"})
+
+        elif effect_type == "PoisonBurstEffect":
+            tags.update({"damage", "combo", "poison", "payoff"})
+
+        elif effect_type == "MultiplyPoisonEffect":
+            tags.update({"combo", "poison", "setup"})
+
+        elif effect_type == "AddStatusEffect":
+            status = data["status_class"]
+
+            if status == "PoisonStatus":
+                tags.update({"dot", "poison", "setup"})
+
+            elif status == "BurnStatus":
+                tags.add("dot")
+
+            elif status == "BleedStatus":
+                tags.update({"dot", "bleed"})
+
+            elif status in {
+                "ColdStatus",
+                "FrozenStatus",
+                "EnfeebleStatus",
+                "VulnerableStatus",
+                "WeakenStatus",
+            }:
+                tags.add("control")
+
+                if status == "ColdStatus":
+                    tags.update({"cold", "setup"})
+
+            elif status in {
+                "DodgeStatus",
+                "CounterStatus",
+                "EntrenchStatus",
+                "ParryStatus",
+                "AbsoluteParryStatus",
+                "FortifyStatus",
+                "InvincibleStatus",
+            }:
+                tags.add("defense")
+
+                if status in {"EntrenchStatus", "FortifyStatus"}:
+                    tags.add("block")
+
+            elif status in {
+                "RegenerationStatus",
+                "ManaRegenerationStatus",
+            }:
+                tags.add("sustain")
+
+            elif status == "HasteStatus":
+                tags.add("tempo")
+
+            elif status in {
+                "StrengthenStatus",
+                "ShadowAssaultStatus",
+            }:
+                tags.add("buff")
+
+                if status == "ShadowAssaultStatus":
+                    tags.add("damage")
+
+        return tags
+
+    def get_learned_effect_pool(self):
+        pool = []
+
+        for observation in self.observations:
+            for data in observation["effect_sequence"]:
+                data_with_source = data.copy()
+                data_with_source["_source_action"] = observation["action_name"]
+
+                pool.append({
+                    "data": data_with_source,
+                    "tags": self.get_effect_tags(data_with_source),
+                    "observation": observation,
+                })
+
+        return pool
+    
+    def describe_generated_effect(self, data):
+        effect_type = data["type"]
+
+        if effect_type == "AddStatusEffect":
+            status = data["status_class"]
+
+            names = {
+                "BleedStatus": "출혈 패턴",
+                "BurnStatus": "화상 패턴",
+                "PoisonStatus": "독 패턴",
+                "ColdStatus": "냉기 패턴",
+                "FrozenStatus": "빙결 패턴",
+                "VulnerableStatus": "취약 패턴",
+                "WeakenStatus": "약화 패턴",
+                "DodgeStatus": "회피 패턴",
+                "ParryStatus": "패링 패턴",
+                "AbsoluteParryStatus": "절대 패링 패턴",
+                "StrengthenStatus": "강화 패턴",
+            }
+
+            return names.get(status, status)
+
+        if effect_type == "DamageEffect":
+            stat = data["stat"]
+
+            names = {
+                "attack": "물리 공격 패턴",
+                "magic": "마법 공격 패턴",
+                "speed": "속도 기반 공격 패턴",
+                "block": "방어도 기반 공격 패턴",
+            }
+
+            return names.get(stat, "공격 패턴")
+
+        names = {
+            "BlockEffect": "방어 패턴",
+            "RestoreHpEffect": "회복 패턴",
+            "RestoreMpEffect": "마력 회복 패턴",
+            "ActionGaugeEffect": "행동 게이지 조작 패턴",
+            "DesperateStrikeEffect": "체력 소모 공격 패턴",
+            "ManaReleaseEffect": "마력 방출 패턴",
+            "PoisonBurstEffect": "독 폭발 패턴",
+            "MultiplyPoisonEffect": "독 증폭 패턴",
+        }
+
+        return names.get(effect_type, effect_type)
+    
+    def find_effect_by_tags(self, pool, required_tags):
+        candidates = [
+            entry
+            for entry in pool
+            if required_tags.issubset(entry["tags"])
+        ]
+
+        if not candidates:
+            return None
+
+        return random.choice(candidates)["data"]
+    
+    def is_safe_support(self, data):
+        effect_type = data["type"]
+        target_type = data["target_type"]
+
+        if effect_type == "AddStatusEffect":
+            status_class = globals().get(data["status_class"])
+
+            if status_class is None:
+                return False
+
+            is_debuff = getattr(status_class, "is_debuff", False)
+
+            if target_type == "self":
+                return not is_debuff
+
+            if target_type in {"enemy", "all_enemies"}:
+                return is_debuff
+
+        if effect_type == "ActionGaugeEffect":
+            amount = data["flat"]
+
+            if target_type == "self":
+                return amount >= 0
+
+            if target_type in {"enemy", "all_enemies"}:
+                return amount <= 0
+
+        return True
+    
+    def complete_effect_sequence(self, core_data, pool):
+        result = []
+
+        core_tags = self.get_effect_tags(core_data)
+
+        # 방어도 기반 공격
+        if (
+            core_data["type"] == "DamageEffect"
+            and core_data["stat"] == "block"
+        ):
+            block = self.find_effect_by_tags(
+                pool,
+                {"block", "setup"},
+            )
+
+            if block is None:
+                return None
+
+            result.append(block)
+            result.append(core_data)
+
+            consume = self.find_effect_by_tags(
+                pool,
+                {"cost", "block"},
+            )
+
+            if consume is not None:
+                result.append(consume)
+
+            return result
+
+        # 독 증폭 / 독 발작
+        if "poison" in core_tags and (
+            "combo" in core_tags
+            or "payoff" in core_tags
+        ):
+            poison = self.find_effect_by_tags(
+                pool,
+                {"poison", "setup", "dot"},
+            )
+
+            if poison is None:
+                return None
+
+            result.append(poison)
+
+            multiply = self.find_effect_by_tags(
+                pool,
+                {"poison", "combo", "setup"},
+            )
+
+            if multiply is not None:
+                result.append(multiply)
+
+            # core가 MultiplyPoison 자신이면 중복 방지
+            if core_data not in result:
+                result.append(core_data)
+
+            return result
+
+        result.append(core_data)
+        return result
+    
+    def generate_combined_action(self):
+        pool = self.get_learned_effect_pool()
+
+        if not pool:
+            return None
+
+        core_candidates = [
+            entry
+            for entry in pool
+            if entry["tags"] & {
+                "damage",
+                "defense",
+                "sustain",
+                "tempo",
+                "dot",
+                "control",
+            }
+            and "cost" not in entry["tags"]
+        ]
+
+        if not core_candidates:
+            return None
+
+        core_entry = random.choice(core_candidates)
+        core = core_entry["data"]
+
+        if (
+            core["type"] == "DamageEffect"
+            and core["stat"] != "block"
+        ):
+            source_observation = core_entry["observation"]
+
+            sequence = []
+
+            for data in source_observation["effect_sequence"]:
+                if data["type"] == "DamageEffect":
+                    data_with_source = data.copy()
+                    data_with_source["_source_action"] = source_observation["action_name"]
+                    sequence.append(data_with_source)
+
+        else:
+            sequence = self.complete_effect_sequence(
+                core,
+                pool,
+            )
+
+        if sequence is None:
+            return None
+        
+        support_candidates = [
+            entry
+            for entry in pool
+            if entry["data"] not in sequence
+            and "cost" not in entry["tags"]
+            and "payoff" not in entry["tags"]
+            and self.is_safe_support(entry["data"])
+        ]
+
+        if support_candidates:
+            support = random.choice(support_candidates)["data"]
+
+            sequence.append(support)
+        
+        sequence.sort(key=self.effect_priority)
+        
+        effects = [
+            self.deserialize_effect(data)
+            for data in sequence
+        ]
+
+        effects = [
+            effect
+            for effect in effects
+            if effect is not None
+        ]
+
+        action = Action(
+            name="생성된 행동",
+            effects=effects,
+            mp_cost=0,
+            flavor_text="학습 데이터를 조합해 새로운 행동 패턴을 생성합니다.",
+        )
+
+        action.generation_sources = [
+            {
+                "action_name": data.get("_source_action", "알 수 없음"),
+                "effect_name": self.describe_generated_effect(data),
+            }
+            for data in sequence
+        ]
+
+        return action
+    
+    def effect_priority(self, data):
+        tags = self.get_effect_tags(data)
+
+        if "setup" in tags:
+            return 0
+
+        if tags & {"buff", "defense", "sustain", "tempo"}:
+            return 1
+
+        if "payoff" in tags:
+            return 3
+
+        if "cost" in tags:
+            return 4
+
+        if tags & {"damage", "dot", "control"}:
+            return 2
+
+        return 2
+    
+    def create_clone(self, player):
+        if not self.observations:
+            return None
+
+        action_pool = []
+
+        for observation in self.observations:
+            effects = []
+
+            for data in observation["effect_sequence"]:
+                data_copy = data.copy()
+                effect = self.deserialize_effect(data_copy)
+
+                if effect is not None:
+                    effects.append(effect)
+
+            if not effects:
+                continue
+
+            action_pool.append(
+                Action(
+                    name=f"복제-{observation['action_name']}",
+                    effects=effects,
+                    mp_cost=0,
+                    flavor_text=f"[복제 행동: {observation['action_name']}]을(를) 실행합니다."
+                )
+            )
+
+        if not action_pool:
+            return None
+
+        # 관찰 횟수만큼 같은 행동이 들어 있으므로
+        # 자주 쓴 행동은 자연스럽게 더 많이 포함됨.
+        random.shuffle(action_pool)
+
+        clone = Enemy(
+            name=f"{player.name}의 복제체",
+            max_hp=220,
+            max_mp=30,
+            speed=18,
+            attack=15,
+            magic=15,
+            defense=12,
+            crit_chance=0.05,
+            action_pool=action_pool,
+        )
+
+        # 장비
+        clone.weapon = deepcopy(player.weapon)
+        clone.armor = deepcopy(player.armor)
+        clone.ring = deepcopy(player.ring)
+
+        # 장비 MP까지 포함해서 완충
+        clone.mp = calculate_max_mp(clone)
+
+        clone.block = 0
+        clone.action_gauge = 0
+        clone.action_index = 0
+
+        return clone
 
 
 def calculate_stat(user, stat):

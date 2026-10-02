@@ -5,6 +5,8 @@ from models import (
     Item,
     Enemy,
     FinalBoss,
+    ChimeraEnemy,
+    GenerativeAIBoss,
     Action,
     
     Passive,
@@ -30,6 +32,7 @@ from models import (
     ManaReleaseEffect,
     PoisonBurstEffect,
     MultiplyPoisonEffect,
+    RemoveDebuffEffect,
     
     Status,
     PoisonStatus,
@@ -151,26 +154,24 @@ items = [
         name="고블린 폭탄",
         effects=[
             DamageEffect(power=0, flat=5, dice_count=4, dice_sides=10),
-            ActionGaugeEffect(power=0, flat=200),
         ],
         target_type="all_enemies",
         usable_in_battle=True,
         usable_outside_battle=False,
         price=80,
-        flavor_text="던지면 모든 적에게 4d10+5의 데미지를 입힌다. 사용 시 턴을 소모하지 않는다.",
+        flavor_text="던지면 모든 적에게 4d10+5의 데미지를 입힌다.",
     ),
     Item(
         name="화염병",
         effects=[
             DamageEffect(power=0, flat=0, dice_count=3, dice_sides=6),
             AddStatusEffect(status_class=BurnStatus, status_kwargs={"power": 6, "duration": 4}),
-            ActionGaugeEffect(power=0, flat=200),
         ],
         target_type="all_enemies",
         usable_in_battle=True,
         usable_outside_battle=False,
         price=80,
-        flavor_text="던지면 모든 적에게 3d6의 데미지와 4턴간 6의 화상을 입힌다. 사용 시 턴을 소모하지 않는다.",
+        flavor_text="던지면 모든 적에게 3d6의 데미지와 4턴간 6의 화상을 입힌다.",
     ),
     Item(
         name="에너지 드링크",
@@ -224,6 +225,19 @@ items = [
         usable_outside_battle=False,
         price=70,
         flavor_text="던지면 모든 적을 3턴간 약화시키고 자신에게 회피를 2 부여한다.",
+    ),
+    Item(
+        name="만능 치료제",
+        effects=[
+            RemoveDebuffEffect(
+                target_type="self",
+            ),
+        ],
+        target_type="self",
+        usable_in_battle=True,
+        usable_outside_battle=True,
+        price=100,
+        flavor_text="몸에 걸린 모든 해로운 상태이상을 제거한다.",
     ),
 ]
 
@@ -3952,11 +3966,11 @@ skills = [
         effects=[
             AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 15}, target_type="self"),
             DamageEffect(power=0.3, stat="attack", dice_count=1, dice_sides=4, target_type="all_enemies"),
-            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 10}, target_type="all_enemies"),
+            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 6}, target_type="all_enemies"),
             DamageEffect(power=0.3, stat="attack", dice_count=1, dice_sides=4, target_type="all_enemies"),
-            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 10}, target_type="all_enemies"),
+            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 6}, target_type="all_enemies"),
             DamageEffect(power=0.3, stat="attack", dice_count=1, dice_sides=4, target_type="all_enemies"),
-            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 10}, target_type="all_enemies"),
+            AddStatusEffect(status_class=BleedStatus, status_kwargs={"stack": 6}, target_type="all_enemies"),
         ],
         mp_cost=10,
         price=200,
@@ -3964,7 +3978,7 @@ skills = [
         flavor_text="피를 제물로 바쳐 적들을 무자비하게 난도질했다!",
         description=(
             "자신에게 출혈 15 부여\n"
-            "모든 적에게 ATK × 0.3 + 1d4 데미지 / 출혈 10 부여 (×3회)\n"
+            "모든 적에게 ATK × 0.3 + 1d4 데미지 / 출혈 6 부여 (×3회)\n"
             "자신의 피를 제물로 삼아 모든 적을 난도질하고 막대한 출혈을 일으킨다."
         ),
     ),
@@ -4514,7 +4528,17 @@ enemies_first_floor = [
             ),
             Action(
                 name="돌가죽",
-                effects=[BlockEffect(power=1.2)],
+                effects=[
+                    BlockEffect(power=1.2),
+                    AddStatusEffect(
+                        status_class=StrengthenStatus,
+                        status_kwargs={
+                            "power": 0.2,
+                            "duration": 2,
+                        },
+                        target_type="self",
+                    ),
+                ],
                 mp_cost=0,
                 flavor_text="돌 골렘이 몸을 웅크리며 힘을 모은다!",
             ),
@@ -5076,7 +5100,7 @@ enemies_third_floor_early = [
                 Action(
                     name="엄호",
                     effects=[
-                        BlockEffect(
+                        BlockEffect(    
                             power=1.5,
                             target_type="ally",
                         ),
@@ -7663,6 +7687,1955 @@ final_boss = FinalBoss(
     cheat_weapon=test_cheat_weapon,
     cheat_armor=test_cheat_armor,
     cheat_ring=test_cheat_ring,
+)
+
+
+enemies_hidden_floor = [
+    [
+        ChimeraEnemy(
+            name="날아다니는 광전 골렘",
+            max_hp=180,
+            speed=9,
+            attack=11,
+            magic=11,
+            defense=8,
+            action_pool=[
+                [
+                    Action(
+                        name="방어 술식",
+                        effects=[BlockEffect(power=1.3, stat="magic")],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘은 방어 술식을 전개했다!",
+                    ),
+                    Action(
+                        name="휘두르기",
+                        effects=[DamageEffect(power=1.2)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘이 무기를 거칠게 휘둘렀다!",
+                    ),
+                    Action(
+                        name="돌가죽",
+                        effects=[BlockEffect(power=1.5)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘의 표면이 더욱 단단하게 굳어졌다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="공격",
+                        effects=[DamageEffect()],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘은 당신을 향해 날아들었다!",
+                    ),
+                    Action(
+                        name="광분",
+                        effects=[DamageEffect(power=1.7)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘이 괴성을 지르며 달려들었다!",
+                    ),
+                    Action(
+                        name="돌가죽",
+                        effects=[
+                            BlockEffect(power=1.2),
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 2,
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘이 몸을 웅크리며 힘을 모은다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="회복",
+                        effects=[RestoreHpEffect(power=0.7)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘은 회복 주문을 외웠다!",
+                    ),
+                    Action(
+                        name="분쇄",
+                        effects=[DamageEffect(power=2.5)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘이 온 힘을 다해 무기를 내리찍었다!",
+                    ),
+                    Action(
+                        name="지면 강타",
+                        effects=[DamageEffect(power=3.0)],
+                        mp_cost=0,
+                        flavor_text="날아다니는 광전 골렘이 거대한 주먹으로 지면을 내리쳤다!",
+                    ),
+                ],
+            ],
+        ),
+
+        ChimeraEnemy(
+            name="서투른 흡혈 마법사",
+            max_hp=150,
+            speed=13,
+            attack=10,
+            magic=11,
+            defense=4,
+            action_pool=[
+                [
+                    Action(
+                        name="견제",
+                        effects=[
+                            DamageEffect(power=0.7),
+                            BlockEffect(power=0.8),
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사는 당신을 견제하며 거리를 벌렸다!",
+                    ),
+                    Action(
+                        name="마력 보호막",
+                        effects=[
+                            BlockEffect(power=1.5, stat="magic")
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 마력 보호막을 펼쳤다!",
+                    ),
+                    Action(
+                        name="할퀴기",
+                        effects=[
+                            DamageEffect(power=0.8)
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 날카로운 발톱으로 할퀴었다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="공격",
+                        effects=[
+                            DamageEffect()
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 단검을 휘둘렀다!",
+                    ),
+                    Action(
+                        name="마력탄",
+                        effects=[
+                            DamageEffect(power=0.7, stat="magic"),
+                            DamageEffect(power=0.7, stat="magic"),
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 두 발의 마력탄을 발사했다!",
+                    ),
+                    Action(
+                        name="흡혈",
+                        effects=[
+                            DamageEffect(power=0.6),
+                            RestoreHpEffect(power=0.6, stat="attack"),
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 당신의 피를 빨아들였다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="연속 베기",
+                        effects=[
+                            DamageEffect(power=0.6),
+                            DamageEffect(power=0.6),
+                            DamageEffect(power=0.6),
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 빠르게 단검을 연달아 휘둘렀다!",
+                    ),
+                    Action(
+                        name="화염구",
+                        effects=[
+                            DamageEffect(power=2.2, stat="magic")
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 화염구를 던졌다!",
+                    ),
+                    Action(
+                        name="흡혈",
+                        effects=[
+                            DamageEffect(power=0.6),
+                            RestoreHpEffect(power=0.6, stat="attack"),
+                        ],
+                        mp_cost=0,
+                        flavor_text="서투른 흡혈 마법사가 당신의 피를 빨아들였다!",
+                    ),
+                ],
+            ],
+        ),
+
+        ChimeraEnemy(
+            name="단굶주린 슬늑고북",
+            max_hp=200,
+            speed=10,
+            attack=11,
+            defense=9,
+            action_pool=[
+                [
+                    Action(
+                        name="웅크리기",
+                        effects=[BlockEffect()],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 몸을 웅크린다!",
+                    ),
+                    Action(
+                        name="공격",
+                        effects=[DamageEffect()],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 당신을 공격했다!",
+                    ),
+                    Action(
+                        name="준비1",
+                        effects=[BlockEffect(power=3)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 굶주렸다!",
+                    ),
+                    Action(
+                        name="단단해지기1",
+                        effects=[BlockEffect(power=1.2)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북의 단단해지기! 효과가 별로인 듯하다...",
+                    ),
+                ],
+                [
+                    Action(
+                        name="몸통박치기",
+                        effects=[DamageEffect(power=2)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북의 몸통박치기!",
+                    ),
+                    Action(
+                        name="공격",
+                        effects=[DamageEffect()],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 당신을 공격했다!",
+                    ),
+                    Action(
+                        name="준비2",
+                        effects=[BlockEffect(power=2)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 굶주렸다!!",
+                    ),
+                    Action(
+                        name="물 뿜기1",
+                        effects=[DamageEffect(power=1.7)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북의 물 뿜기! 효과가 별로인 듯하다...",
+                    ),
+                ],
+                [
+                    Action(
+                        name="공격",
+                        effects=[DamageEffect()],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북은 당신을 공격했다!",
+                    ),
+                    Action(
+                        name="강공격",
+                        effects=[DamageEffect(power=2.5)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북의 강공격!",
+                    ),
+                    Action(
+                        name="공격",
+                        effects=[DamageEffect()],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북이 당신을 물어뜯었다!",
+                    ),
+                    Action(
+                        name="물 뿜기2",
+                        effects=[DamageEffect(power=3.7)],
+                        mp_cost=0,
+                        flavor_text="단굶주린 슬늑고북의 물 뿜기! 효과가 굉장했다!",
+                    ),
+                ],
+            ],
+        ),
+    ],
+    [
+        ChimeraEnemy(
+            name="독성 슬염 임결 정령",
+            max_hp=190,
+            speed=11,
+            attack=11,
+            magic=12,
+            defense=7,
+            action_pool=[
+                [
+                    Action(
+                        name="독성 몸통박치기",
+                        effects=[
+                            DamageEffect(power=1.2),
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 독액을 흩뿌리며 몸통박치기했다!",
+                    ),
+                    Action(
+                        name="불씨",
+                        effects=[
+                            DamageEffect(
+                                power=0.8,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 작은 불씨를 날렸다!",
+                    ),
+                    Action(
+                        name="냉기탄",
+                        effects=[
+                            DamageEffect(
+                                power=0.7,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=ColdStatus,
+                                status_kwargs={
+                                    "stack": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 차가운 냉기탄을 발사했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="독액",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 짙은 독액을 뿜어냈다!",
+                    ),
+                    Action(
+                        name="화염탄",
+                        effects=[
+                            DamageEffect(
+                                power=0.9,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 1,
+                                    "duration": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 뜨거운 화염탄을 쏘아냈다!",
+                    ),
+                    Action(
+                        name="얼음 장막",
+                        effects=[
+                            BlockEffect(
+                                power=1.3,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 얼음의 장막을 둘렀다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="웅크리기",
+                        effects=[
+                            BlockEffect(
+                                power=1.5,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 몸을 단단하게 웅크렸다!",
+                    ),
+                    Action(
+                        name="불꽃 난사",
+                        effects=[
+                            DamageEffect(
+                                power=0.5,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 1,
+                                    "duration": 3,
+                                },
+                            ),
+                            DamageEffect(
+                                power=0.5,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 1,
+                                    "duration": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 연달아 불꽃을 퍼부었다!",
+                    ),
+                    Action(
+                        name="빙결창",
+                        effects=[
+                            DamageEffect(
+                                power=1.1,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=ColdStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="독성 슬염 임결 정령이 날카로운 얼음창을 쏘아냈다!",
+                    ),
+                ],
+            ],
+        ),
+        ChimeraEnemy(
+            name="얼어붙은 화염 사제",
+            max_hp=210,
+            speed=8,
+            attack=12,
+            magic=11,
+            defense=11,
+            action_pool=[
+                [
+                    Action(
+                        name="방패 올리기",
+                        effects=[
+                            BlockEffect(
+                                power=1.5,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 방패를 들어 자세를 굳혔다!",
+                    ),
+                    Action(
+                        name="철벽",
+                        effects=[
+                            BlockEffect(
+                                power=1.5,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 묵묵히 방어 자세를 취했다!",
+                    ),
+                    Action(
+                        name="징벌",
+                        effects=[
+                            DamageEffect(
+                                power=0.9,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 저주 섞인 빛을 쏘아냈다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="화염 베기",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 1,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제의 검에서 불꽃이 솟구쳤다!",
+                    ),
+                    Action(
+                        name="냉기 베기",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                            ),
+                            AddStatusEffect(
+                                status_class=ColdStatus,
+                                status_kwargs={
+                                    "stack": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제의 서리 낀 검이 차가운 궤적을 그렸다!",
+                    ),
+                    Action(
+                        name="기도",
+                        effects=[
+                            RestoreHpEffect(
+                                power=1.0,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 기도하며 상처를 회복했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="강타",
+                        effects=[
+                            DamageEffect(
+                                power=2.0,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 불타는 검을 힘껏 내리쳤다!",
+                    ),
+                    Action(
+                        name="대검 강타",
+                        effects=[
+                            DamageEffect(
+                                power=2.5,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 무거운 대검을 내리쳤다!",
+                    ),
+                    Action(
+                        name="신앙의 방벽",
+                        effects=[
+                            BlockEffect(
+                                power=1.3,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="얼어붙은 화염 사제가 기괴한 성구를 읊으며 방벽을 펼쳤다!",
+                    ),
+                ],
+            ],
+        ),
+        ChimeraEnemy(
+            name="피에 굶주린 폭탄 독혈귀",
+            max_hp=180,
+            speed=12,
+            attack=11,
+            magic=5,
+            defense=5,
+            action_pool=[
+                [
+                    Action(
+                        name="물기",
+                        effects=[
+                            DamageEffect(power=0.9),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 날카로운 이빨로 물어뜯었다!",
+                    ),
+                    Action(
+                        name="베기",
+                        effects=[
+                            DamageEffect(power=0.9),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 1,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 웃으며 칼날을 휘둘렀다!",
+                    ),
+                    Action(
+                        name="할퀴기",
+                        effects=[
+                            DamageEffect(power=0.8),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 날카로운 손톱으로 상처를 냈다!",
+                    ),
+                    Action(
+                        name="화약 준비",
+                        effects=[
+                            BlockEffect(power=0.8),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 낄낄거리며 화약통을 꺼냈다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="독침",
+                        effects=[
+                            DamageEffect(power=0.6),
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 독이 묻은 침을 찔러 넣었다!",
+                    ),
+                    Action(
+                        name="난도질",
+                        effects=[
+                            DamageEffect(power=0.5),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 1,
+                                },
+                            ),
+                            DamageEffect(power=0.5),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 1,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 미친 듯이 칼을 휘둘렀다!",
+                    ),
+                    Action(
+                        name="흡혈",
+                        effects=[
+                            DamageEffect(power=0.8),
+                            RestoreHpEffect(
+                                power=0.8,
+                                stat="attack",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 상처에서 흘러나온 피를 빨아들였다!",
+                    ),
+                    Action(
+                        name="폭탄 투척",
+                        effects=[
+                            DamageEffect(power=1.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 폭탄을 냅다 던졌다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="독액 분사",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 끈적한 독액을 뿜어냈다!",
+                    ),
+                    Action(
+                        name="처형",
+                        effects=[
+                            DamageEffect(power=1.8),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 양손으로 무기를 치켜들고 내려찍었다!",
+                    ),
+                    Action(
+                        name="피의 갈망",
+                        effects=[
+                            DamageEffect(power=1.3),
+                            RestoreHpEffect(
+                                power=0.5,
+                                stat="attack",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 피를 갈망하며 달려들었다!",
+                    ),
+                    Action(
+                        name="화약 과충전",
+                        effects=[
+                            BlockEffect(power=0.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="피에 굶주린 폭탄 독혈귀가 더 큰 폭탄에 불을 붙였다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="대폭발",
+                        effects=[
+                            DamageEffect(power=3.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="콰아아아앙!! 피에 굶주린 폭탄 독혈귀의 대폭발!",
+                    ),
+                ],
+            ],
+        ),
+    ],
+    [
+        ChimeraEnemy(
+            name="중장 중갑 작열기사",
+            max_hp=240,
+            speed=8,
+            attack=13,
+            magic=6,
+            defense=13,
+            action_pool=[
+                [
+                    Action(
+                        name="엄호",
+                        effects=[
+                            BlockEffect(
+                                power=1.5,
+                                target_type="ally",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 아군의 앞을 가로막았다!",
+                    ),
+                    Action(
+                        name="베기",
+                        effects=[
+                            DamageEffect(power=1.3),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 검을 크게 휘둘렀다!",
+                    ),
+                    Action(
+                        name="작열 베기",
+                        effects=[
+                            DamageEffect(power=1.2),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 2,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 불타는 검을 휘둘렀다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="방패 치기",
+                        effects=[
+                            DamageEffect(power=1.0),
+                            BlockEffect(
+                                power=1.0,
+                                target_type="ally",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 거대한 방패로 당신을 후려쳤다!",
+                    ),
+                    Action(
+                        name="방어 자세",
+                        effects=[
+                            BlockEffect(power=1.2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 검을 세우고 단단히 자세를 잡았다!",
+                    ),
+                    Action(
+                        name="방패 올리기",
+                        effects=[
+                            BlockEffect(power=1.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 방패를 들어 공격에 대비했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="철벽 엄호",
+                        effects=[
+                            BlockEffect(
+                                power=2.0,
+                                target_type="ally",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 방패를 굳게 세워 아군을 보호했다!",
+                    ),
+                    Action(
+                        name="강하게 베기",
+                        effects=[
+                            DamageEffect(power=2.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 체중을 실어 검을 힘껏 내리쳤다!",
+                    ),
+                    Action(
+                        name="불꽃 내려찍기",
+                        effects=[
+                            DamageEffect(power=1.6),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 2,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="중장 중갑 작열기사가 불타는 검을 힘껏 내려찍었다!",
+                    ),
+                ],
+            ],
+        ),
+
+        ChimeraEnemy(
+            name="석궁 처형 결투가",
+            max_hp=180,
+            speed=12,
+            attack=14,
+            defense=6,
+            action_pool=[
+                [
+                    Action(
+                        name="석궁 사격",
+                        effects=[
+                            DamageEffect(power=1.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 당신을 향해 석궁을 발사했다!",
+                    ),
+                    Action(
+                        name="횡베기",
+                        effects=[
+                            DamageEffect(power=1.2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 거대한 무기를 옆으로 휘둘렀다!",
+                    ),
+                    Action(
+                        name="견제",
+                        effects=[
+                            DamageEffect(power=1.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 거리를 재며 빠르게 검을 휘둘렀다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="견제 사격",
+                        effects=[
+                            DamageEffect(power=0.5),
+                            DamageEffect(power=0.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 움직임을 견제하듯 빠르게 화살을 날렸다!",
+                    ),
+                    Action(
+                        name="내려찍기",
+                        effects=[
+                            DamageEffect(power=1.6),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 무기를 힘껏 내려찍었다!",
+                    ),
+                    Action(
+                        name="반격 자세",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=CounterStatus,
+                                status_kwargs={
+                                    "power": 1.5,
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 검을 세우고 당신의 공격을 기다린다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="조준 사격",
+                        effects=[
+                            DamageEffect(power=2.2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 침착하게 조준한 뒤 강력한 화살을 발사했다!",
+                    ),
+                    Action(
+                        name="처형",
+                        effects=[
+                            DamageEffect(power=3.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 온 힘을 실어 치명적인 일격을 내리쳤다!",
+                    ),
+                    Action(
+                        name="일섬",
+                        effects=[
+                            DamageEffect(power=1.8),
+                        ],
+                        mp_cost=0,
+                        flavor_text="석궁 처형 결투가가 빈틈을 노려 날카롭게 검을 그었다!",
+                    ),
+                ],
+            ],
+        ),
+
+        ChimeraEnemy(
+            name="전투 주술 사제 지휘관",
+            max_hp=190,
+            speed=10,
+            attack=9,
+            magic=12,
+            defense=7,
+            action_pool=[
+                [
+                    Action(
+                        name="전투의 함성",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.25,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 아군의 사기를 끌어올렸다!",
+                    ),
+                    Action(
+                        name="치유",
+                        effects=[
+                            RestoreHpEffect(
+                                power=1.5,
+                                flat=8,
+                                target_type="ally",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 아군의 상처를 치유했다!",
+                    ),
+                    Action(
+                        name="진격 명령",
+                        effects=[
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=50,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 아군에게 진격을 명령했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="주술탄",
+                        effects=[
+                            DamageEffect(power=1.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 기묘한 탄환을 날렸다!",
+                    ),
+                    Action(
+                        name="지팡이 타격",
+                        effects=[
+                            DamageEffect(power=1.0),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 지팡이를 휘둘렀다!",
+                    ),
+                    Action(
+                        name="공격 명령",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관의 명령에 적들의 공세가 거세졌다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="가속의 주술",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=HasteStatus,
+                                status_kwargs={
+                                    "power": 0,
+                                    "flat": 20,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                            DamageEffect(power=0.7),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 아군을 가속시켰다!",
+                    ),
+                    Action(
+                        name="응급 광역 치유",
+                        effects=[
+                            RestoreHpEffect(
+                                power=0.8,
+                                flat=5,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 짧은 기도로 아군의 상처를 봉합했다!",
+                    ),
+                    Action(
+                        name="지휘검",
+                        effects=[
+                            DamageEffect(power=1.2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="전투 주술 사제 지휘관이 직접 검을 휘둘렀다!",
+                    ),
+                ],
+            ],
+        ),
+    ],
+    [
+        ChimeraEnemy(
+            name="사천왕-융합체",
+            max_hp=360,
+            speed=10,
+            attack=11,
+            magic=11,
+            defense=9,
+            action_pool=[
+                [
+                    Action(
+                        name="빛",
+                        effects=[
+                            DamageEffect(
+                                power=0.7,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 2,
+                                    "duration": 3,
+                                },
+                            ),
+                            AddStatusEffect(
+                                status_class=WeakenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 타오르는 빛을 내리쬐었다!",
+                    ),
+                    Action(
+                        name="수호",
+                        effects=[
+                            BlockEffect(
+                                power=1.3,
+                                stat="defense",
+                                flat=3,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 거대한 방패를 치켜들었다!",
+                    ),
+                    Action(
+                        name="혹한",
+                        effects=[
+                            DamageEffect(
+                                power=0.8,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            AddStatusEffect(
+                                status_class=ColdStatus,
+                                status_kwargs={
+                                    "stack": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 얼어붙는 냉기를 쏟아냈다!",
+                    ),
+                    Action(
+                        name="기습",
+                        effects=[
+                            DamageEffect(
+                                power=0.8,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 2,
+                                },
+                            ),
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=25,
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 빈틈을 노려 기습했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="축복",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 2,
+                                },
+                                target_type="all_allies",
+                            ),
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=40,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 축복을 내렸다!",
+                    ),
+                    Action(
+                        name="일격",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=6,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 묵직하게 무기를 휘둘렀다!",
+                    ),
+                    Action(
+                        name="화염구 연타",
+                        effects=[
+                            DamageEffect(
+                                power=0.45,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            DamageEffect(
+                                power=0.45,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            DamageEffect(
+                                power=0.45,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 3,
+                                    "duration": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 연달아 화염구를 내던졌다!",
+                    ),
+                    Action(
+                        name="난도질",
+                        effects=[
+                            DamageEffect(
+                                power=0.45,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.45,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.45,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 빠르게 칼날을 휘둘렀다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="기도",
+                        effects=[
+                            BlockEffect(
+                                power=0.8,
+                                stat="magic",
+                                target_type="all_allies",
+                            ),
+                            AddStatusEffect(
+                                status_class=FortifyStatus,
+                                status_kwargs={
+                                    "power": 0.5,
+                                    "flat": 2,
+                                    "stat": "defense",
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                            AddStatusEffect(
+                                status_class=RegenerationStatus,
+                                status_kwargs={
+                                    "power": 0,
+                                    "flat": 3,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 경건한 기도를 올렸다!",
+                    ),
+                    Action(
+                        name="철벽",
+                        effects=[
+                            BlockEffect(
+                                power=1.8,
+                                stat="defense",
+                                flat=5,
+                                target_type="self",
+                            ),
+                            AddStatusEffect(
+                                status_class=CounterStatus,
+                                status_kwargs={
+                                    "power": 1.2,
+                                    "flat": 0,
+                                    "dice_count": 1,
+                                    "dice_sides": 6,
+                                    "stat": "attack",
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 철벽의 자세를 취했다!",
+                    ),
+                    Action(
+                        name="저주",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=WeakenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 3,
+                                },
+                            ),
+                            AddStatusEffect(
+                                status_class=EnfeebleStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 3,
+                                },
+                            ),
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 불길한 저주를 걸었다!",
+                    ),
+                    Action(
+                        name="발목 베기",
+                        effects=[
+                            DamageEffect(
+                                power=0.8,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=4,
+                            ),
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=-50,
+                                target_type="enemy",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 낮게 파고들어 발목을 베었다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="심판",
+                        effects=[
+                            DamageEffect(
+                                power=1.8,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=6,
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 3,
+                                    "duration": 3,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 신성한 불꽃으로 심판을 내렸다!",
+                    ),
+                    Action(
+                        name="분쇄",
+                        effects=[
+                            DamageEffect(
+                                power=1.8,
+                                stat="attack",
+                                dice_count=2,
+                                dice_sides=6,
+                            ),
+                            AddStatusEffect(
+                                status_class=VulnerableStatus,
+                                status_kwargs={
+                                    "power": 0.25,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 무기를 힘껏 내리꽂았다!",
+                    ),
+                    Action(
+                        name="마력탄",
+                        effects=[
+                            DamageEffect(
+                                power=0.35,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.35,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.35,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.35,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                            DamageEffect(
+                                power=0.35,
+                                stat="magic",
+                                dice_count=1,
+                                dice_sides=3,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 수많은 마력탄을 퍼부었다!",
+                    ),
+                    Action(
+                        name="연막",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=WeakenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 2,
+                                },
+                            ),
+                            AddStatusEffect(
+                                status_class=DodgeStatus,
+                                status_kwargs={
+                                    "count": 2,
+                                },
+                                target_type="self",
+                            ),
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=75,
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 연막 속으로 모습을 감췄다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="축복",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 2,
+                                },
+                                target_type="all_allies",
+                            ),
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=40,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 축복을 내렸다!",
+                    ),
+                    Action(
+                        name="일격",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                                stat="attack",
+                                dice_count=1,
+                                dice_sides=6,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 묵직하게 무기를 휘둘렀다!",
+                    ),
+                    Action(
+                        name="마력 집중",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.5,
+                                    "duration": 2,
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 막대한 마력을 끌어모으기 시작했다!",
+                    ),
+                    Action(
+                        name="급소 찌르기",
+                        effects=[
+                            DamageEffect(
+                                power=1.7,
+                                stat="attack",
+                                dice_count=2,
+                                dice_sides=6,
+                            ),
+                            AddStatusEffect(
+                                status_class=VulnerableStatus,
+                                status_kwargs={
+                                    "power": 0.25,
+                                    "duration": 2,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 급소를 노리고 칼날을 찔러 넣었다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="기도",
+                        effects=[
+                            BlockEffect(
+                                power=0.8,
+                                stat="magic",
+                                target_type="all_allies",
+                            ),
+                            AddStatusEffect(
+                                status_class=FortifyStatus,
+                                status_kwargs={
+                                    "power": 0.5,
+                                    "flat": 2,
+                                    "stat": "defense",
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                            AddStatusEffect(
+                                status_class=RegenerationStatus,
+                                status_kwargs={
+                                    "power": 0,
+                                    "flat": 3,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 경건한 기도를 올렸다!",
+                    ),
+                    Action(
+                        name="철벽",
+                        effects=[
+                            BlockEffect(
+                                power=1.8,
+                                stat="defense",
+                                flat=5,
+                                target_type="self",
+                            ),
+                            AddStatusEffect(
+                                status_class=CounterStatus,
+                                status_kwargs={
+                                    "power": 1.2,
+                                    "flat": 0,
+                                    "dice_count": 1,
+                                    "dice_sides": 6,
+                                    "stat": "attack",
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 철벽의 자세를 취했다!",
+                    ),
+                    Action(
+                        name="대마법",
+                        effects=[
+                            DamageEffect(
+                                power=2.4,
+                                stat="magic",
+                                dice_count=3,
+                                dice_sides=8,
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 응축된 마력을 한꺼번에 폭발시켰다!",
+                    ),
+                    Action(
+                        name="패링",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=ParryStatus,
+                                status_kwargs={
+                                    "power": 1.5,
+                                    "flat": 0,
+                                    "dice_count": 1,
+                                    "dice_sides": 6,
+                                    "stat": "attack",
+                                },
+                                target_type="self",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="사천왕-융합체가 공격을 받아칠 자세를 취했다!",
+                    ),
+                ],
+            ],
+        ),
+        ChimeraEnemy(
+            name="거대 융합 지휘 골렘",
+            max_hp=300,
+            speed=9,
+            attack=11,
+            magic=11,
+            defense=11,
+            action_pool=[
+                [
+                    Action(
+                        name="더블 배럴 샷건",
+                        effects=[
+                            DamageEffect(power=1.5),
+                            DamageEffect(power=1.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 당신에게 더블 배럴 샷건을 쐈다!!",
+                    ),
+                    Action(
+                        name="독성 증기",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=PoisonStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘의 몸에서 짙은 독성 증기가 뿜어져 나왔다!",
+                    ),
+                    Action(
+                        name="진격 명령",
+                        effects=[
+                            ActionGaugeEffect(
+                                flat=30,
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 아군에게 진격을 명령했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="웅크리기",
+                        effects=[
+                            BlockEffect(power=2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘은 몸을 웅크린다!",
+                    ),
+                    Action(
+                        name="화염 방사",
+                        effects=[
+                            DamageEffect(
+                                power=1.0,
+                                stat="magic",
+                            ),
+                            AddStatusEffect(
+                                status_class=BurnStatus,
+                                status_kwargs={
+                                    "power": 3,
+                                    "duration": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 전방으로 거대한 화염을 뿜었다!",
+                    ),
+                    Action(
+                        name="공격 명령",
+                        effects=[
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.2,
+                                    "duration": 3,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 전군에 공격을 명령했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="공격",
+                        effects=[
+                            DamageEffect(),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘은 당신을 공격했다!",
+                    ),
+                    Action(
+                        name="냉각 장치 가동",
+                        effects=[
+                            BlockEffect(
+                                power=1.5,
+                                stat="defense",
+                            ),
+                            AddStatusEffect(
+                                status_class=ColdStatus,
+                                status_kwargs={
+                                    "stack": 9,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 장갑을 냉각하며 주변의 열기를 빼앗았다!",
+                    ),
+                    Action(
+                        name="지휘검",
+                        effects=[
+                            DamageEffect(power=1.2),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 지휘검을 휘둘렀다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="회전 톱날",
+                        effects=[
+                            DamageEffect(
+                                power=0.6,
+                                stat="attack",
+                            ),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                            DamageEffect(
+                                power=0.6,
+                                stat="attack",
+                            ),
+                            AddStatusEffect(
+                                status_class=BleedStatus,
+                                status_kwargs={
+                                    "stack": 4,
+                                },
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘의 양팔에서 회전 톱날이 튀어나왔다!",
+                    ),
+                    Action(
+                        name="돌격 명령",
+                        effects=[
+                            ActionGaugeEffect(
+                                power=0,
+                                flat=50,
+                                target_type="all_allies",
+                            ),
+                            AddStatusEffect(
+                                status_class=StrengthenStatus,
+                                status_kwargs={
+                                    "power": 0.15,
+                                    "duration": 2,
+                                },
+                                target_type="all_allies",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 전면 돌격을 명령했다!",
+                    ),
+                ],
+                [
+                    Action(
+                        name="마력 과부하",
+                        effects=[
+                            DamageEffect(
+                                power=2.2,
+                                stat="magic",
+                            ),
+                        ],
+                        mp_cost=0,
+                        flavor_text="경고음이 울린다! 거대 융합 지휘 골렘이 축적한 마력을 폭발시켰다!",
+                    ),
+                    Action(
+                        name="최후의 돌격",
+                        effects=[
+                            DamageEffect(power=2.5),
+                        ],
+                        mp_cost=0,
+                        flavor_text="거대 융합 지휘 골렘이 모든 것을 건 최후의 돌격을 감행했다!",
+                    ),
+                ],
+            ],
+        ),
+    ],
+]
+
+
+# 히든보스
+generative_ai_boss = GenerativeAIBoss(
+    name="생성형 인공지능",
+    max_hp=1500,
+    speed=20,
+    attack=14,
+    magic=14,
+    defense=12,
+
+    action_slots_phase_1=[
+        [
+            Action(
+                name="오류 수정",
+                effects=[
+                    DamageEffect(
+                        power=1.0,
+                        stat="magic",
+                        dice_count=1,
+                        dice_sides=6,
+                        target_type="enemy",
+                    ),
+                ],
+                flavor_text="생성형 인공지능이 불필요한 변수를 제거합니다."
+            ),
+        ],
+        [
+            Action(
+                name="구조 안정화",
+                effects=[
+                    BlockEffect(
+                        power=0.8,
+                        flat=5,
+                        stat="defense",
+                        target_type="self",
+                    ),
+                ],
+                flavor_text="자신의 구조를 재정렬해 방어 성능을 높입니다."
+            ),
+            Action(
+                name="보호 연산",
+                effects=[
+                    BlockEffect(
+                        power=0.6,
+                        flat=5,
+                        stat="defense",
+                        target_type="all_allies",
+                    ),
+                ],
+                flavor_text="생성된 개체들의 방어 패턴을 보정합니다."
+            ),
+        ],
+    ],
+
+    action_slots_phase_2=[
+        [
+            Action(
+                name="오류 수정",
+                effects=[
+                    DamageEffect(
+                        power=1.0,
+                        stat="magic",
+                        dice_count=1,
+                        dice_sides=6,
+                        target_type="enemy",
+                    ),
+                ],
+                flavor_text="생성형 인공지능이 불필요한 변수를 제거합니다."
+            ),
+        ],
+        [
+            Action(
+                name="패턴 분석",
+                effects=[
+                    AddStatusEffect(
+                        status_class=VulnerableStatus,
+                        status_kwargs={
+                            "power": 0.25,
+                            "duration": 2,
+                        },
+                        target_type="enemy",
+                    ),
+                ],
+                flavor_text="전투 패턴을 분석해 취약점을 노출시킵니다."
+            ),
+        ],
+        [
+            Action(
+                name="구조 보정",
+                effects=[
+                    BlockEffect(
+                        power=0.7,
+                        flat=5,
+                        stat="defense",
+                        target_type="all_allies",
+                    ),
+                ],
+                flavor_text="생성된 개체들의 구조를 실시간으로 보정합니다."
+            ),
+        ],
+    ],
+
+    action_slots_phase_3=[
+        [
+            Action(
+                name="오류 수정",
+                effects=[
+                    DamageEffect(
+                        power=1.1,
+                        stat="magic",
+                        dice_count=1,
+                        dice_sides=6,
+                        target_type="enemy",
+                    ),
+                ],
+                flavor_text="생성형 인공지능이 전투 데이터를 기반으로 직접 개입합니다."
+            ),
+        ],
+        [
+            Action(
+                name="행동 예측",
+                effects=[
+                    ActionGaugeEffect(
+                        power=0,
+                        flat=-50,
+                        target_type="enemy",
+                    ),
+                ],
+                flavor_text="다음 행동을 예측해 대응 속도를 늦춥니다."
+            ),
+        ],
+        [
+            Action(
+                name="자기 최적화",
+                effects=[
+                    AddStatusEffect(
+                        status_class=StrengthenStatus,
+                        status_kwargs={
+                            "power": 0.2,
+                            "duration": 3,
+                        },
+                        target_type="self",
+                    ),
+                ],
+                flavor_text="자신의 전투 구조를 최적화합니다."
+            ),
+        ],
+    ],
 )
 
 

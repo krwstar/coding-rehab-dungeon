@@ -467,7 +467,7 @@ def select_job(player):
         print("=" * 45)
         print("직업을 고르세요.")
         print()
-        # print("0. 디버거")
+        print("0. 디버거")
         print("1. 전사")
         print("   활용 스탯/자원: ATK / HP")
         print("   특징: 강력한 단타와 출혈, 흡혈을 활용해 적과 정면으로 맞섭니다.")
@@ -530,21 +530,24 @@ def select_job(player):
             player.skills.append(find_skill(skills,"패링"))
             player.skills.append(find_skill(skills,"도발"))
             break
-        # elif choice == "0":
-        #     player.job = "디버거"
-        #     player.weapon = find_equipment(equipments, "연습용 도")
-        #     player.armor = find_equipment(equipments, "검객의 외투")
-        #     player.ring = find_equipment(equipments, "수련자의 반지")
-        #     player.skills.append(find_skill(skills,"낙일참"))
-        #     player.skills.append(find_skill(skills,"승월섬"))
-        #     player.items.extend(items)
-        #     player.max_hp += 1000
-        #     player.max_mp += 1000
-            # player.attack += 15
-            # player.magic += 15
-            # player.defense += 15
-            # player.speed += 15
-            # break
+        elif choice == "0":
+            player.job = "디버거"
+            player.weapon = find_equipment(equipments, "철 검")
+            player.armor = find_equipment(equipments, "가죽 갑옷")
+            player.ring = find_equipment(equipments, "전사의 반지")
+            player.skills.append(find_skill(skills, "불멸의 불꽃"))
+            player.skills.append(find_skill(skills, "히코보시"))
+            player.skills.append(find_skill(skills, "난공불락"))
+            player.skills.append(find_skill(skills, "세계"))
+            player.skills.append(find_skill(skills, "혈제"))
+            player.items.extend(items)
+            player.max_hp += 1000
+            player.max_mp += 1000
+            player.attack += 30
+            player.magic += 30
+            player.defense += 30
+            player.speed += 15
+            break
         else:
             print("올바르지 않은 입력")
     player.hp = calculate_max_hp(player)

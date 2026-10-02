@@ -4,8 +4,27 @@ import random
 from wcwidth import wcswidth
 
 from models import (
+    BlockEffect,
+    ColdStatus,
     Player,
     FinalBoss,
+    GenerativeAIBoss,
+    
+    DamageEffect,
+    ActionGaugeEffect,
+    ConsumeHpEffect,
+    ConsumeMpEffect,
+    ConsumeBlockEffect,
+    DesperateStrikeEffect,
+    ManaReleaseEffect,
+    PoisonBurstEffect,
+    RestoreHpEffect,
+    RestoreMpEffect,
+    MultiplyPoisonEffect,
+    AddStatusEffect,
+    
+    BleedStatus,
+    
     calculate_max_hp,
     calculate_max_mp,
     calculate_speed,
@@ -83,7 +102,7 @@ def battle(player, enemies):
                         )
                     
                     for enemy in enemy_units:
-                        if isinstance(enemy, FinalBoss):
+                        if isinstance(enemy, (FinalBoss, GenerativeAIBoss)):
                             old_log_count = len(battle_logs)
                             special_log = enemy.check_phase(enemy_units, battle_logs,)
                             play_new_battle_logs(
@@ -222,6 +241,11 @@ def player_turn(
         "> "
     )
     
+    used_action = None
+    used_target = None
+    item_used_this_turn = False
+    before = get_player_observation_snapshot(player, enemy_units)
+    
     while True:
         draw_battle_screen(player, enemy_units, player_gauge, battle_logs, menu)
         action = input()
@@ -243,6 +267,7 @@ def player_turn(
             old_log_count = len(battle_logs)
             add_battle_log(battle_logs, player.weapon.basic_attack.flavor_text)
             play_new_battle_logs(player, enemy_units, player_gauge, battle_logs, old_log_count, delay=0.5)
+            
             execute_action(
                 player,
                 target,
@@ -252,12 +277,16 @@ def player_turn(
                 player,
                 enemy_units,
             )
+            
+            used_action = player.weapon.basic_attack
+            used_target = target
             break
 
         elif action == "2":
             old_log_count = len(battle_logs)
             add_battle_log(battle_logs, player.armor.defense_action.flavor_text)
             play_new_battle_logs(player, enemy_units, player_gauge, battle_logs, old_log_count, delay=0.5)
+            
             execute_action(
                 player,
                 None,
@@ -267,6 +296,9 @@ def player_turn(
                 player,
                 enemy_units,
             )
+            
+            used_action = player.armor.defense_action
+            used_target = player
             break
 
         elif action == "3":
@@ -295,10 +327,9 @@ def player_turn(
         
             selected_skill = player.skills[choice - 1]
             
-            if selected_skill.name == "세계":
-                if any(status.name == "시간의 부채" for status in player.statuses):
-                    add_battle_log(battle_logs, "아직 세계를 다시 사용할 수 없다.")
-                    continue
+            if selected_skill.name == "세계" and any(status.name == "시간의 부채" for status in player.statuses):
+                add_battle_log(battle_logs, "아직 세계를 다시 사용할 수 없다.")
+                continue
             
             if action_needs_enemy_target(selected_skill):
                 target = select_enemy_target(
@@ -329,11 +360,19 @@ def player_turn(
             if not result:
                 continue
             
+            used_action = selected_skill
+            used_target = target
             player.trigger_skill_use_passive(target, battle_logs)
-            
             break
 
         elif action == "4":
+            if item_used_this_turn:
+                add_battle_log(
+                    battle_logs,
+                    "이번 턴에는 이미 아이템을 사용했다."
+                )
+                continue
+            
             while True:                
                 grouped_items = group_items(player.items)
                 item_menu = "아이템 목록\n"
@@ -353,7 +392,7 @@ def player_turn(
                     add_battle_log(battle_logs, "올바르지 않은 입력")
                     continue
                 choice = int(choice)
-                if choice in range(0, len(player.items) + 1):
+                if choice in range(0, len(grouped_items) + 1):
                     break
                 add_battle_log(battle_logs, "올바르지 않은 입력")
                 continue
@@ -385,12 +424,53 @@ def player_turn(
                 if player.items[i].name == item.name:
                     player.items.pop(i)
                     break
-            use_item(player, item, target=target, enemy_units=enemy_units, battle_logs=battle_logs,)            
-            break
+            use_item(player, item, target=target, enemy_units=enemy_units, battle_logs=battle_logs,)
+            item_used_this_turn = True
+            continue
 
         else:
             add_battle_log(battle_logs, "올바르지 않은 입력")
             continue
+    
+    if used_action is not None:
+        observe_player_action(
+            player,
+            used_action,
+            used_target,
+            enemy_units,
+            battle_logs,
+            before,
+            actual_damage=(
+                player.run_stats["damage_dealt"]
+                - before["damage_dealt"]
+            ),
+            actual_healing=(
+                player.run_stats["healing"]
+                - before["healing"]
+            ),
+            block_gained=(
+                player.run_stats["block_gained"]
+                - before["block_gained"]
+            ),
+            mp_recovered=max(
+                0,
+                player.mp - before["mp"] + used_action.mp_cost
+            ),
+            gauge_change=(
+                player.action_gauge
+                - before["action_gauge"]
+            ),
+            enemy_gauge_changes={
+                enemy.name: (
+                    enemy.action_gauge
+                    - before["enemy_gauges"].get(
+                        id(enemy),
+                        enemy.action_gauge
+                    )
+                )
+                for enemy in enemy_units
+            }
+        )
     
     player.trigger_turn_end_passive(battle_logs)
     player.trigger_turn_end_statuses(battle_logs)
@@ -418,7 +498,34 @@ def enemy_turn(player, enemy, enemy_units, battle_logs):
         return
 
     update_enemy_action_pool(enemy, enemy_units)
-    action = select_enemy_action(enemy)
+    
+    if isinstance(enemy, GenerativeAIBoss):
+        enemy_units[:] = [
+            enemy
+            for enemy in enemy_units
+            if enemy.hp > 0
+            or isinstance(enemy, GenerativeAIBoss)
+        ]
+        
+        action = enemy.select_action(enemy_units)
+
+        if action is None:
+            enemy.summon_generated_enemy(
+                player,
+                enemy_units,
+                battle_logs,
+            )
+            play_new_battle_logs(
+                player,
+                enemy_units,
+                player.action_gauge,
+                battle_logs,
+                old_log_count,
+                delay=0.4,
+            )
+            return
+    else:
+        action = enemy.select_action()
     
     if isinstance(enemy, FinalBoss):
         old_log_count = len(battle_logs)
@@ -436,7 +543,17 @@ def enemy_turn(player, enemy, enemy_units, battle_logs):
     add_battle_log(battle_logs, action.flavor_text)
     play_new_battle_logs(player, enemy_units, player.action_gauge, battle_logs, old_log_count, delay=0.5)
     
-    execute_action(enemy, player, action, [player], battle_logs, player, enemy_units, ally_units=enemy_units)
+    if (
+        action.name == "재현-세계"
+        and any(status.name == "시간의 부채" for status in enemy.statuses)
+    ):
+        add_battle_log(
+            battle_logs,
+            f"{enemy.name}은(는) 아직 [세계]를 재현할 수 없다."
+        )
+    else:
+        execute_action(enemy, player, action, [player], battle_logs, player, enemy_units, ally_units=enemy_units)
+    
     enemy.trigger_turn_end_passive(battle_logs)
     enemy.trigger_turn_end_statuses(battle_logs)
     enemy.cleanup_statuses()
@@ -462,23 +579,16 @@ def update_enemy_action_pool(enemy, enemy_units):
     if enemy.action_pool is not new_pool:
         enemy.action_pool = new_pool
         enemy.action_index = 0
-
-
-def select_enemy_action(enemy):
-    if isinstance(enemy, FinalBoss):
-        return enemy.select_action()
-
-    action = enemy.action_pool[enemy.action_index]
-
-    enemy.action_index += 1
-    if enemy.action_index >= len(enemy.action_pool):
-        enemy.action_index = 0
-
-    return action
-
-
+        
+        
 def hp_check(player, enemy_units, battle_logs):
     alive_units = get_alive_enemy_units(enemy_units)
+    if any(
+        isinstance(enemy, GenerativeAIBoss)
+        and enemy.hp <= 0
+        for enemy in enemy_units
+    ):
+        alive_units = []
     
     if not alive_units:
         total_gold = sum(unit.gold for unit in enemy_units)
@@ -833,3 +943,705 @@ def glitch_text(text, intensity=0.05):
             result.append(char)
 
     return "".join(result)
+
+
+def get_player_observation_snapshot(player, enemy_units):
+    return {
+        "damage_dealt": player.run_stats["damage_dealt"],
+        "healing": player.run_stats["healing"],
+        "block_gained": player.run_stats["block_gained"],
+        "mp": player.mp,
+        "action_gauge": player.action_gauge,
+
+        "enemy_gauges": {
+            id(enemy): enemy.action_gauge
+            for enemy in enemy_units
+        },
+
+        "statuses": snapshot_battle_statuses(
+            player,
+            enemy_units,
+        ),
+    }
+
+
+def snapshot_statuses(unit):
+    return [
+        snapshot_status(status)
+        for status in unit.statuses
+    ]
+
+
+def snapshot_status(status):
+    data = {
+        "name": status.name,
+        "class": status.__class__.__name__,
+        "is_debuff": status.is_debuff,
+    }
+
+    for attr in (
+        "stack",
+        "duration",
+        "power",
+        "flat",
+        "count",
+        "used",
+        "parried_any",
+        "expired",
+        "stat",
+        "dice_count",
+        "dice_sides",
+    ):
+        if hasattr(status, attr):
+            data[attr] = getattr(status, attr)
+
+    return data
+
+
+def snapshot_unit_statuses(unit):
+    return {
+        "unit_id": id(unit),
+        "unit_name": unit.name,
+        "statuses": snapshot_statuses(unit),
+    }
+
+
+def snapshot_battle_statuses(player, enemy_units):
+    return {
+        "player": snapshot_unit_statuses(player),
+        "enemies": [
+            snapshot_unit_statuses(enemy)
+            for enemy in enemy_units
+        ],
+    }
+
+
+def diff_status_values(before, after):
+    changes = {}
+
+    keys = set(before.keys()) | set(after.keys())
+
+    ignored_keys = {
+        "name",
+        "class",
+        "is_debuff",
+    }
+
+    for key in keys:
+        if key in ignored_keys:
+            continue
+
+        before_value = before.get(key)
+        after_value = after.get(key)
+
+        if before_value != after_value:
+            changes[key] = {
+                "before": before_value,
+                "after": after_value,
+            }
+
+    return changes
+
+
+def diff_statuses(before_statuses, after_statuses):
+    changes = []
+
+    before_map = {
+        status["class"]: status
+        for status in before_statuses
+    }
+
+    after_map = {
+        status["class"]: status
+        for status in after_statuses
+    }
+
+    all_classes = set(before_map) | set(after_map)
+
+    for status_class in all_classes:
+        before = before_map.get(status_class)
+        after = after_map.get(status_class)
+
+        if before is None:
+            changes.append({
+                "type": "added",
+                "status": after,
+            })
+            continue
+
+        if after is None:
+            changes.append({
+                "type": "removed",
+                "status": before,
+            })
+            continue
+
+        value_changes = diff_status_values(
+            before,
+            after,
+        )
+
+        if value_changes:
+            changes.append({
+                "type": "changed",
+                "class": status_class,
+                "name": after["name"],
+                "is_debuff": after["is_debuff"],
+                "changes": value_changes,
+            })
+
+    return changes
+
+
+def find_status_snapshot(statuses, status_class_name):
+    for status in statuses:
+        if status["class"] == status_class_name:
+            return status
+
+    return None
+
+
+def get_bleed_stack_from_action(action, target_types):
+    bleed_stack = 0
+
+    for effect in action.effects:
+        if not isinstance(effect, AddStatusEffect):
+            continue
+
+        if effect.status_class is not BleedStatus:
+            continue
+
+        if effect.target_type not in target_types:
+            continue
+
+        bleed_stack += effect.status_kwargs.get("stack", 0)
+
+    return bleed_stack
+
+
+def analyze_bleed(
+    before_statuses,
+    after_statuses,
+    action,
+    target_types,
+):
+    added_stack = get_bleed_stack_from_action(
+        action,
+        target_types,
+    )
+
+    if added_stack <= 0:
+        return None
+
+    before_bleed = find_status_snapshot(
+        before_statuses,
+        "BleedStatus",
+    )
+
+    after_bleed = find_status_snapshot(
+        after_statuses,
+        "BleedStatus",
+    )
+
+    before_stack = (
+        before_bleed.get("stack", 0)
+        if before_bleed is not None
+        else 0
+    )
+
+    after_stack = (
+        after_bleed.get("stack", 0)
+        if after_bleed is not None
+        else 0
+    )
+
+    total_stack = before_stack + added_stack
+
+    explosion_count = total_stack // 10
+
+    return {
+        "status": "BleedStatus",
+        "name": "출혈",
+        "is_debuff": True,
+        "stack_added": added_stack,
+        "before_stack": before_stack,
+        "after_stack": after_stack,
+        "explosion_count": explosion_count,
+    }
+
+
+def get_cold_stack_from_action(action, target_types):
+    cold_stack = 0
+
+    for effect in action.effects:
+        if not isinstance(effect, AddStatusEffect):
+            continue
+
+        if effect.status_class is not ColdStatus:
+            continue
+
+        if effect.target_type not in target_types:
+            continue
+
+        cold_stack += effect.status_kwargs.get("stack", 0)
+
+    return cold_stack
+
+
+def analyze_cold(
+    before_statuses,
+    after_statuses,
+    action,
+    target_types,
+):
+    before_cold = find_status_snapshot(
+        before_statuses,
+        "ColdStatus",
+    )
+    before_frozen = find_status_snapshot(
+        before_statuses,
+        "FrozenStatus",
+    )
+    before_immunity = find_status_snapshot(
+        before_statuses,
+        "FreezeImmunityStatus",
+    )
+
+    cold_stack = (
+        before_cold.get("stack", 0)
+        if before_cold is not None
+        else 0
+    )
+
+    frozen = before_frozen is not None
+    immune = before_immunity is not None
+
+    attempted_stack = 0
+    effective_stack = 0
+    blocked_stack = 0
+    freeze_triggered = False
+
+    for effect in action.effects:
+        if not isinstance(effect, AddStatusEffect):
+            continue
+
+        if effect.status_class is not ColdStatus:
+            continue
+
+        if effect.target_type not in target_types:
+            continue
+
+        stack = effect.status_kwargs.get("stack", 0)
+        attempted_stack += stack
+
+        # 동결 또는 냉기 면역 상태에서는 냉기 적용 불가
+        if frozen or immune:
+            blocked_stack += stack
+            continue
+
+        old_stack = cold_stack
+
+        # 실제 ColdStatus 코드와 동일하게 최대 10
+        cold_stack = min(
+            10,
+            cold_stack + stack,
+        )
+
+        effective_stack += (
+            cold_stack - old_stack
+        )
+
+        # 10스택 도달 → 냉기 제거 + 동결
+        if cold_stack >= 10:
+            cold_stack = 0
+            frozen = True
+            freeze_triggered = True
+    
+    if attempted_stack <= 0:
+        return None
+
+    after_cold = find_status_snapshot(
+        after_statuses,
+        "ColdStatus",
+    )
+    after_frozen = find_status_snapshot(
+        after_statuses,
+        "FrozenStatus",
+    )
+    after_immunity = find_status_snapshot(
+        after_statuses,
+        "FreezeImmunityStatus",
+    )
+
+    return {
+        "status": "ColdStatus",
+        "name": "냉기",
+        "is_debuff": True,
+
+        "attempted_stack": attempted_stack,
+        "effective_stack": effective_stack,
+        "blocked_stack": blocked_stack,
+
+        "before_stack": (
+            before_cold.get("stack", 0)
+            if before_cold is not None
+            else 0
+        ),
+
+        "after_stack": (
+            after_cold.get("stack", 0)
+            if after_cold is not None
+            else 0
+        ),
+
+        "freeze_triggered": freeze_triggered,
+
+        "frozen_before": before_frozen is not None,
+        "frozen_after": after_frozen is not None,
+
+        "immunity_before": before_immunity is not None,
+        "immunity_after": after_immunity is not None,
+    }
+
+
+def observe_player_action(
+    player,
+    action,
+    target,
+    enemy_units,
+    battle_logs,
+    before,
+    actual_damage=0,
+    actual_healing=0,
+    block_gained=0,
+    mp_recovered=0,
+    gauge_change=0,
+    enemy_gauge_changes=None,
+):
+    ai = next(
+        (
+            enemy
+            for enemy in enemy_units
+            if isinstance(enemy, GenerativeAIBoss)
+        ),
+        None,
+    )
+
+    if ai is None:
+        return
+
+    after_statuses = snapshot_battle_statuses(
+        player,
+        enemy_units,
+    )
+
+    before_player_statuses = (
+        before["statuses"]["player"]["statuses"]
+    )
+
+    after_player_statuses = (
+        after_statuses["player"]["statuses"]
+    )
+
+    player_status_changes = diff_statuses(
+        before_player_statuses,
+        after_player_statuses,
+    )
+
+    before_enemies = {
+        enemy["unit_id"]: enemy
+        for enemy in before["statuses"]["enemies"]
+    }
+
+    after_enemies = {
+        enemy["unit_id"]: enemy
+        for enemy in after_statuses["enemies"]
+    }
+
+    enemy_status_changes = {}
+    enemy_bleed = {}
+    enemy_cold = {}
+
+    for unit_id, after_enemy in after_enemies.items():
+        before_enemy = before_enemies.get(unit_id)
+
+        if before_enemy is None:
+            continue
+        
+        enemy_object = next(
+            (
+                enemy
+                for enemy in enemy_units
+                if id(enemy) == unit_id
+            ),
+            None,
+        )
+
+        if enemy_object is None:
+            continue
+        
+        is_single_target = enemy_object is target        
+        
+        target_types = []
+        if is_single_target:
+            target_types.append("enemy")
+            
+        target_types.append("all_enemies")
+
+        changes = diff_statuses(
+            before_enemy["statuses"],
+            after_enemy["statuses"],
+        )
+
+        if changes:
+            enemy_status_changes[
+                after_enemy["unit_name"]
+            ] = changes
+
+        bleed = analyze_bleed(
+            before_enemy["statuses"],
+            after_enemy["statuses"],
+            action,
+            tuple(target_types),
+        )
+
+        if bleed is not None:
+            enemy_bleed[
+                after_enemy["unit_name"]
+            ] = bleed
+
+        cold = analyze_cold(
+            before_enemy["statuses"],
+            after_enemy["statuses"],
+            action,
+            tuple(target_types),
+        )
+
+        if cold is not None:
+            enemy_cold[
+                after_enemy["unit_name"]
+            ] = cold
+
+    player_bleed = analyze_bleed(
+        before_player_statuses,
+        after_player_statuses,
+        action,
+        ("self",),
+    )
+
+    player_cold = analyze_cold(
+        before_player_statuses,
+        after_player_statuses,
+        action,
+        ("self",),
+    )
+
+    damage_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, DamageEffect)
+    ]
+    
+    gauge_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, ActionGaugeEffect)
+    ]
+    
+    block_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, BlockEffect)
+    ]
+    
+    restore_hp_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, RestoreHpEffect)
+    ]
+
+    restore_mp_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, RestoreMpEffect)
+    ]
+    
+    status_effects = [
+        effect
+        for effect in action.effects
+        if isinstance(effect, AddStatusEffect)
+    ]
+
+    observation = {
+        "action_name": action.name,
+
+        "hit_count": len(damage_effects),
+
+        "damage_effects": [
+            {
+                "power": effect.power,
+                "flat": effect.flat,
+                "stat": effect.stat,
+                "dice_count": effect.dice_count,
+                "dice_sides": effect.dice_sides,
+                "can_crit": effect.can_crit,
+                "target_type": effect.target_type,
+            }
+            for effect in damage_effects
+        ],
+
+        "actual_damage": actual_damage,
+        "actual_healing": actual_healing,
+        "block_gained": block_gained,
+        "mp_recovered": mp_recovered,
+        "gauge_change": gauge_change,
+        
+        "enemy_gauge_changes": (
+            enemy_gauge_changes
+            if enemy_gauge_changes is not None
+            else {}
+        ),
+        "gauge_effects": [
+            {
+                "power": effect.power,
+                "flat": effect.flat,
+                "stat": effect.stat,
+                "target_type": effect.target_type,
+            }
+            for effect in gauge_effects
+        ],
+
+        "status_changes": {
+            "player": player_status_changes,
+            "enemies": enemy_status_changes,
+        },
+
+        "bleed_analysis": {
+            "player": player_bleed,
+            "enemies": enemy_bleed,
+        },
+
+        "cold_analysis": {
+            "player": player_cold,
+            "enemies": enemy_cold,
+        },
+        
+        "block_effects": [
+            {
+                "power": effect.power,
+                "flat": effect.flat,
+                "stat": effect.stat,
+                "target_type": effect.target_type,
+            }
+            for effect in block_effects
+        ],
+        
+        "restore_hp_effects": [
+            {
+                "power": effect.power,
+                "flat": effect.flat,
+                "stat": effect.stat,
+                "target_type": effect.target_type,
+            }
+            for effect in restore_hp_effects
+        ],
+
+        "restore_mp_effects": [
+            {
+                "power": effect.power,
+                "flat": effect.flat,
+                "stat": effect.stat,
+                "target_type": effect.target_type,
+            }
+            for effect in restore_mp_effects
+        ],
+        
+        "status_effects": [
+            {
+                "status_class": effect.status_class.__name__,
+                "status_kwargs": effect.status_kwargs.copy(),
+                "target_type": effect.target_type,
+            }
+            for effect in status_effects
+        ],
+        
+        "effect_sequence": [
+            serialize_effect(effect)
+            for effect in action.effects
+        ],
+    }
+
+    ai.observe(observation, battle_logs,)
+
+
+def serialize_effect(effect):
+    data = {
+        "type": effect.__class__.__name__,
+        "target_type": effect.target_type,
+    }
+
+    if isinstance(effect, DamageEffect):
+        data.update({
+            "power": effect.power,
+            "flat": effect.flat,
+            "stat": effect.stat,
+            "dice_count": effect.dice_count,
+            "dice_sides": effect.dice_sides,
+            "can_crit": effect.can_crit,
+            "can_trigger_passives": effect.can_trigger_passives,
+        })
+
+    elif isinstance(
+        effect,
+        (RestoreHpEffect, RestoreMpEffect, BlockEffect, ActionGaugeEffect)
+    ):
+        data.update({
+            "power": effect.power,
+            "flat": effect.flat,
+            "stat": effect.stat,
+        })
+
+    elif isinstance(
+        effect,
+        (ConsumeHpEffect, ConsumeMpEffect, ConsumeBlockEffect)
+    ):
+        data.update({
+            "power": effect.power,
+            "flat": effect.flat,
+        })
+
+    elif isinstance(effect, DesperateStrikeEffect):
+        data.update({
+            "power": effect.power,
+            "flat": effect.flat,
+            "stat": effect.stat,
+            "dice_count": effect.dice_count,
+            "dice_sides": effect.dice_sides,
+            "hp_cost_power": effect.hp_cost_power,
+        })
+
+    elif isinstance(effect, ManaReleaseEffect):
+        data.update({
+            "power": effect.power,
+            "stat": effect.stat,
+            "dice_count": effect.dice_count,
+            "dice_sides": effect.dice_sides,
+            "mp_cost_power": effect.mp_cost_power,
+            "mp_damage_power": effect.mp_damage_power,
+        })
+
+    elif isinstance(effect, MultiplyPoisonEffect):
+        data.update({
+            "power": effect.power,
+        })
+
+    elif isinstance(effect, PoisonBurstEffect):
+        pass
+
+    elif isinstance(effect, AddStatusEffect):
+        data.update({
+            "status_class": effect.status_class.__name__,
+            "status_kwargs": effect.status_kwargs.copy(),
+        })
+
+    return data

@@ -3,7 +3,7 @@ import time
 from colorama import just_fix_windows_console
 
 from data import prologue_text, early_access
-from dungeon import run_floor, run_last_floor, slow_print
+from dungeon import run_floor, run_last_floor, run_hidden_floor, slow_print
 from player_utils import create_player, select_job
 from run_log import save_run_log
 
@@ -93,21 +93,13 @@ def prologue_screen():
 def main():
     if not title_screen():
         return
-    register_job_clear("전사")
-    register_job_clear("마법사")
-    register_job_clear("도적")
-    register_job_clear("수호자")
-
-    print(all_jobs_cleared())  # False
-
-    register_job_clear("검객")
-
-    print(all_jobs_cleared())  # True
+    
     prologue_screen()
 
     clear_screen()
     player = create_player()
     select_job(player)
+    run_hidden_floor(player) # 테스트중
 
     clear_screen()
     print()
@@ -143,6 +135,30 @@ def main():
     print()
     input("\nEnter를 눌러 다음 층으로...")
     
+    while True:
+        print(
+"""
+복도 한쪽 벽면에 작은 단말기가 박혀 있다.
+화면에는 단 한 문장만 떠 있었다.
+
+「세상에서 가장 위대한 그래픽카드는?」
+
+0. 무시하고 지나간다
+"""
+        )
+
+        answer = input("> ").strip()
+
+        if answer == "상상력":
+            run_hidden_floor(player)
+            return
+
+        elif answer == "0":
+            break
+
+        else:
+            print("아무 일도 일어나지 않았다")
+
     run_last_floor(player)
     
     register_job_clear(player.job)
