@@ -9492,8 +9492,8 @@ enemies_hidden_floor = [
 # 히든보스
 generative_ai_boss = GenerativeAIBoss(
     name="생성형 인공지능",
-    max_hp=1500,
-    speed=20,
+    max_hp=2000,
+    speed=25,
     attack=14,
     magic=14,
     defense=12,

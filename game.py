@@ -150,15 +150,15 @@ def main():
 
         if answer == "상상력":
             run_hidden_floor(player)
-            return
+            break
 
         elif answer == "0":
+            run_last_floor(player)
             break
 
         else:
             print("아무 일도 일어나지 않았다")
-
-    run_last_floor(player)
+    
     
     register_job_clear(player.job)
     
